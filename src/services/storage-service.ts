@@ -1,5 +1,6 @@
 import { type IDBPDatabase, openDB } from "idb";
 import type { SavedDocument, UserProfile } from "../models/types.js";
+import { contentHash as digest, newId } from "../utils/ids.js";
 import { DEFAULT_SETTINGS, getDefaultFontSize } from "./defaults.js";
 
 const DB_NAME = "speeedy-db";
@@ -43,7 +44,7 @@ async function getDb(): Promise<IDBPDatabase> {
 
 function createDefaultProfile(): UserProfile {
 	return {
-		id: crypto.randomUUID(),
+		id: newId(),
 		displayName: "Reader",
 		avatarEmoji: "📚",
 		avatarImage: null,
@@ -180,13 +181,7 @@ export async function getSavedDocuments(): Promise<SavedDocument[]> {
 }
 
 async function hashContent(text: string): Promise<string> {
-	const buf = await crypto.subtle.digest(
-		"SHA-256",
-		new TextEncoder().encode(text),
-	);
-	return Array.from(new Uint8Array(buf))
-		.map((b) => b.toString(16).padStart(2, "0"))
-		.join("");
+	return digest(text);
 }
 
 export async function saveDocument(
@@ -211,7 +206,7 @@ export async function saveDocument(
 
 	const saved: SavedDocument = {
 		...doc,
-		id: crypto.randomUUID(),
+		id: newId(),
 		savedAt: new Date().toISOString(),
 		contentHash,
 	};

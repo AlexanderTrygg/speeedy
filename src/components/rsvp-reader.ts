@@ -48,6 +48,8 @@ export class RsvpReader extends LitElement {
 	@state() private isProgressHovered = false;
 	@state() private isSeeking = false;
 	@state() private seekWordIndex: number | null = null;
+	private swipeStart: { x: number; y: number } | null = null;
+	private suppressNextTap = false;
 	private wasPlayingBeforeSeek = false;
 	private countdownTimer: ReturnType<typeof setTimeout> | null = null;
 	private seekingPointerId: number | null = null;
@@ -86,10 +88,10 @@ export class RsvpReader extends LitElement {
 				});
 				break;
 			case "ArrowUp":
-				this.engine.seekBy(-(this.settings.rewindStep ?? 5));
+				this.engine.rewindSentence();
 				break;
 			case "ArrowDown":
-				this.engine.seekBy(this.settings.rewindStep ?? 5);
+				this.engine.forwardSentence();
 				break;
 			case "r":
 			case "R":
@@ -350,6 +352,31 @@ export class RsvpReader extends LitElement {
 		}
 		this.sessionStartTime = null;
 	}
+
+	private onWordPointerDown = (e: PointerEvent): void => {
+		this.swipeStart = { x: e.clientX, y: e.clientY };
+	};
+
+	/** Swipe right = previous sentence, swipe left = next. A plain tap still plays/pauses. */
+	private onWordPointerUp = (e: PointerEvent): void => {
+		const start = this.swipeStart;
+		this.swipeStart = null;
+		if (!start) return;
+		const dx = e.clientX - start.x;
+		const dy = e.clientY - start.y;
+		if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+		this.suppressNextTap = true;
+		if (dx > 0) this.engine.rewindSentence();
+		else this.engine.forwardSentence();
+	};
+
+	private onWordTap = (): void => {
+		if (this.suppressNextTap) {
+			this.suppressNextTap = false;
+			return;
+		}
+		this.togglePlay();
+	};
 
 	private togglePlay(): void {
 		const state = this.engine.getState();
@@ -743,8 +770,13 @@ export class RsvpReader extends LitElement {
 
 					<!-- Word Display Area -->
 					<div
-						class="flex-1 flex flex-col items-center justify-center cursor-pointer select-none overflow-hidden relative"
-						@click=${this.togglePlay}
+						class="flex-1 flex flex-col items-center justify-center cursor-pointer select-none overflow-hidden relative touch-pan-y"
+						@pointerdown=${this.onWordPointerDown}
+						@pointerup=${this.onWordPointerUp}
+						@pointercancel=${() => {
+							this.swipeStart = null;
+						}}
+						@click=${this.onWordTap}
 					>
 						${
 							!s || s.totalWords === 0
@@ -1251,7 +1283,6 @@ export class RsvpReader extends LitElement {
 		remainingSeconds: number,
 		remainingLabel: string,
 	) {
-		const step = this.settings.rewindStep ?? 5;
 		return html`
       <div class="flex flex-wrap items-center justify-center gap-3 md:gap-4 max-w-2xl mx-auto w-full" role="toolbar" aria-label="Playback controls">
 
@@ -1260,10 +1291,10 @@ export class RsvpReader extends LitElement {
           type="button"
           class="btn btn-ghost btn-md btn-circle min-h-[44px] min-w-[44px] touch-manipulation"
           @click=${() => {
-						this.engine.seekBy(-step);
+						this.engine.rewindSentence();
 					}}
-          title="Back ${step} words (↑)"
-          aria-label="Back ${step} words"
+          title="Back one sentence (↑ or swipe right)"
+          aria-label="Back one sentence"
         >
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1297,10 +1328,10 @@ export class RsvpReader extends LitElement {
           type="button"
           class="btn btn-ghost btn-md btn-circle min-h-[44px] min-w-[44px] touch-manipulation"
           @click=${() => {
-						this.engine.seekBy(step);
+						this.engine.forwardSentence();
 					}}
-          title="Skip ${step} words (↓)"
-          aria-label="Skip ${step} words"
+          title="Next sentence (↓ or swipe left)"
+          aria-label="Next sentence"
         >
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1366,9 +1397,10 @@ export class RsvpReader extends LitElement {
 		const shortcuts = [
 			["Space", "Play / Pause"],
 			["F", "Toggle focus mode (immersive while playing)"],
-			["Tap", "Pause — with focus mode on, shows controls again"],
+			["Tap", "Play / Pause — with focus mode on, shows controls again"],
 			["←  →", "Speed −/+ 25 WPM"],
-			["↑  ↓", "Back / Forward 5 words"],
+			["↑  ↓", "Back / Forward one sentence"],
+			["Swipe → ←", "Back / Forward one sentence"],
 			["R", "Restart from beginning"],
 			["Esc", "Back to home"],
 			["?", "Toggle this overlay"],

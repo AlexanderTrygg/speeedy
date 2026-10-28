@@ -32,4 +32,3 @@ export function showToast(message: string, type: ToastType = "info"): void {
 		new CustomEvent("speeedy:toast", { detail: { message, type } }),
 	);
 }
-

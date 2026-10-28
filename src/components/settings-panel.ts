@@ -16,6 +16,9 @@ const TOOLTIPS = {
 	sentencePause:
 		"Extra duration after periods, question marks, and exclamation points.",
 	paragraphPause: "Extra delay when a new paragraph begins.",
+	commaPause: "Extra duration after commas and semicolons.",
+	pauseFloor:
+		"Keeps a minimum break at commas, sentence ends and paragraphs, so sentences don't blur together at high WPM.",
 	letterSpacing: "Adjust the horizontal space between characters.",
 	pivotOffset:
 		"Nudges the focus point left or right if you prefer eye-fixation off-center.",
@@ -181,6 +184,23 @@ export class SettingsPanel extends LitElement {
               tip=${TOOLTIPS.sentencePause}
               @change=${(e: CustomEvent) => this.emit({ sentencePauseMultiplier: e.detail.value })}
             ></speeedy-range>
+            <speeedy-range
+              label="Comma pause"
+              min="1" max="10" step="0.5"
+              .value=${s.commaPauseMultiplier ?? s.sentencePauseMultiplier}
+              unit="×"
+              min-label="1×"
+              max-label="10×"
+              tip=${TOOLTIPS.commaPause}
+              @change=${(e: CustomEvent) => this.emit({ commaPauseMultiplier: e.detail.value })}
+            ></speeedy-range>
+            <speeedy-toggle
+              label="Minimum pause at speed"
+              hint="Pauses don't shrink away at high WPM"
+              ?checked=${s.pauseFloor ?? true}
+              tip=${TOOLTIPS.pauseFloor}
+              @change=${(e: CustomEvent) => this.emit({ pauseFloor: e.detail.value })}
+            ></speeedy-toggle>
             <speeedy-range
               label="Paragraph pause"
               hint="Extra dwell at paragraph start"
@@ -588,35 +608,6 @@ export class SettingsPanel extends LitElement {
               tip=${TOOLTIPS.contextPauseOnClose}
               @change=${(e: CustomEvent) => this.emit({ contextPauseOnClose: e.detail.value })}
             ></speeedy-toggle>
-            <div>
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-sm text-base-content">Rewind skip amount</span>
-                <span class="font-mono text-sm font-medium">${s.rewindStep ?? 5}w</span>
-              </div>
-              <div class="flex items-center gap-1.5">
-                ${([1, 3, 5] as const).map(
-									(n) => html`
-                  <button
-                    class="btn btn-xs flex-1 ${(s.rewindStep ?? 5) === n ? "btn-primary" : "btn-ghost border border-base-300"}"
-                    @click=${() => this.emit({ rewindStep: n })}
-                  >${n}</button>
-                `,
-								)}
-                <div class="flex-1 min-w-12 relative">
-                  <input
-                    type="number" min="1" max="100"
-                    .value=${String([1, 3, 5].includes(s.rewindStep ?? 5) ? "" : s.rewindStep)}
-                    placeholder=${[1, 3, 5].includes(s.rewindStep ?? 5) ? "..." : ""}
-                    @input=${(e: InputEvent) => {
-											const val = Number((e.target as HTMLInputElement).value);
-											if (val > 0) this.emit({ rewindStep: val });
-										}}
-                    class="input input-xs input-bordered w-full pr-4 text-center font-mono"
-                  />
-                  <span class="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] opacity-30 pointer-events-none">w</span>
-                </div>
-              </div>
-            </div>
           </div>
         </section>
 

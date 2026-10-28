@@ -34,6 +34,10 @@ export interface ReaderSettings {
 	/** -20 to +20: horizontal pivot offset as % of reading area half-width. 0 = centre. */
 	pivotOffset: PivotOffset;
 	sentencePauseMultiplier: number;
+	/** Comma/semicolon pause; falls back to sentencePauseMultiplier. */
+	commaPauseMultiplier?: number;
+	/** Keep a minimum pause at punctuation however fast the WPM (default on). */
+	pauseFloor?: boolean;
 	showProgress: boolean;
 	/** When on, playback (and pre-roll countdown) hides header, progress bar, toolbar, and settings for full immersion. Pausing shows controls again. */
 	focusModeEnabled: boolean;

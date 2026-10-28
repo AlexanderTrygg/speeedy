@@ -1,5 +1,6 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { newId } from "../utils/ids.js";
 
 export type ToastType = "success" | "error" | "info" | "warning";
 
@@ -33,7 +34,7 @@ export class ToastContainer extends LitElement {
 		const { message, type } = (
 			e as CustomEvent<{ message: string; type: ToastType }>
 		).detail;
-		const id = crypto.randomUUID();
+		const id = newId();
 		this.toasts = [...this.toasts, { id, message, type }];
 		setTimeout(() => this.dismiss(id), TOAST_DURATION_MS);
 	};

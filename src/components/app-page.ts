@@ -16,11 +16,7 @@ import {
 } from "../services/storage-service.js";
 import { applyTheme, getResolvedTheme } from "../services/theme-service.js";
 import { trackEvent } from "../utils/analytics.js";
-import {
-	emitProfileUpdated,
-	navigate,
-	showToast,
-} from "../utils/events.js";
+import { emitProfileUpdated, navigate, showToast } from "../utils/events.js";
 import { icon } from "../utils/icons.js";
 import { countWords, estimateReadingMinutes } from "../utils/text-utils.js";
 import "./start-preview-dialog.ts";

@@ -170,6 +170,42 @@ const COMMON_WORDS = new Set([
 	"което",
 	"който",
 	"която",
+	// Swedish
+	"och",
+	"att",
+	"det",
+	"som",
+	"en",
+	"är",
+	"av",
+	"för",
+	"med",
+	"till",
+	"den",
+	"har",
+	"de",
+	"inte",
+	"om",
+	"ett",
+	"han",
+	"men",
+	"var",
+	"jag",
+	"sig",
+	"från",
+	"vi",
+	"så",
+	"kan",
+	"man",
+	"när",
+	"år",
+	"ska",
+	"vid",
+	"där",
+	"nu",
+	"du",
+	"hon",
+	"eller",
 ]);
 
 export interface TokenContext {
@@ -289,10 +325,43 @@ export class RSVPEngine {
 
 	seekToWord(index: number): void {
 		this.state.wordIndex = Math.max(0, Math.min(this.tokens.length - 1, index));
+		// Keeps a second rewind tap, or a pause, from snapping back to the old word.
+		this.state.displayWordIndex = this.state.wordIndex;
 		if (!this.state.playing) {
 			this.updateCurrentDisplay();
 		}
 		this.emit("stateChange", this.state);
+	}
+
+	/**
+	 * Jump to the start of the sentence being read. Pressed again right at a
+	 * sentence start, it goes one sentence further back.
+	 */
+	rewindSentence(): void {
+		const idx = this.currentIndex();
+		let start = sentenceStartIndex(this._tokens, idx);
+		if (idx - start <= 1 && start > 0) {
+			start = sentenceStartIndex(this._tokens, start - 1);
+		}
+		this.seekToWord(start);
+	}
+
+	/** Jump to the start of the next sentence. */
+	forwardSentence(): void {
+		const idx = this.currentIndex();
+		for (let i = idx; i < this._tokens.length - 1; i++) {
+			if (endsSentence(this._tokens[i])) {
+				this.seekToWord(i + 1);
+				return;
+			}
+		}
+	}
+
+	/** Index of the word on screen (wordIndex runs one chunk ahead while playing). */
+	private currentIndex(): number {
+		return this.state.playing
+			? this.state.displayWordIndex
+			: this.state.wordIndex;
 	}
 
 	setWpm(settings: ReaderSettings): void {
@@ -333,36 +402,18 @@ export class RSVPEngine {
 		const remainingTokens = this.tokens.slice(current);
 		let totalMs = 0;
 
-		const smartEnabled = settings.smartSpeed;
-		const rampEnabled = settings.speedRampEnabled;
-		const rampTarget = settings.speedRampTarget;
-		const sentenceMult = settings.sentencePauseMultiplier;
-		const paragraphMult = settings.paragraphPauseMultiplier ?? 1;
-		const asideMult = settings.contextPauseOnClose ? 1.15 : 1;
 		const chunkSize = settings.chunkSize || 1;
-
 		const limit = Math.min(remainingTokens.length, 2000);
 		for (let i = 0; i < limit; i += chunkSize) {
-			const idx = current + i;
 			const chunkTokens = remainingTokens.slice(i, i + chunkSize);
 			if (chunkTokens.length === 0) break;
-
-			const firstToken = chunkTokens[0];
-			const lastToken = chunkTokens[chunkTokens.length - 1];
-
-			let wpm = settings.wpm;
-			if (rampEnabled) wpm = rampWpm(settings.wpm, rampTarget, idx, total);
-			if (smartEnabled) wpm = smartWpm(wpm, firstToken.text);
-
-			const msPerChunk = (60000 / wpm) * chunkTokens.length;
-			const extraPause = lastToken.pauseMultiplier - 1;
-			let delay = msPerChunk * (1 + extraPause * sentenceMult);
-
-			if (paragraphMult > 1 && firstToken.context?.paragraphStart)
-				delay *= paragraphMult;
-			if (lastToken.context?.closesAside) delay *= asideMult;
-
-			totalMs += delay;
+			const wpm = effectiveWpm(
+				settings,
+				chunkTokens[0].text,
+				current + i,
+				total,
+			);
+			totalMs += chunkDelayMs(chunkTokens, wpm, settings);
 		}
 
 		if (remainingTokens.length > limit) {
@@ -386,7 +437,6 @@ export class RSVPEngine {
 			this.tokens.length,
 		);
 		const chunkTokens = this.tokens.slice(this.state.wordIndex, chunkEnd);
-		const lastToken = chunkTokens[chunkTokens.length - 1];
 
 		this.state.currentTokens = chunkTokens;
 		this.state.displayWordIndex = this.state.wordIndex;
@@ -400,33 +450,14 @@ export class RSVPEngine {
 			this.emit("progress", this.state);
 		}
 
-		const baseWpm = settings.speedRampEnabled
-			? rampWpm(
-					settings.wpm,
-					settings.speedRampTarget,
-					this.state.wordIndex,
-					this.tokens.length,
-				)
-			: settings.wpm;
-
-		const finalWpm = settings.smartSpeed
-			? smartWpm(baseWpm, chunkTokens[0].text)
-			: baseWpm;
+		const finalWpm = effectiveWpm(
+			settings,
+			chunkTokens[0].text,
+			this.state.wordIndex,
+			this.tokens.length,
+		);
 		this.state.currentWpm = Math.round(finalWpm);
-
-		const msPerWord = 60000 / finalWpm;
-		const totalMsForChunk = msPerWord * chunkTokens.length;
-
-		const extraPause = lastToken.pauseMultiplier - 1;
-		let delay =
-			totalMsForChunk * (1 + extraPause * settings.sentencePauseMultiplier);
-
-		const firstToken = chunkTokens[0];
-		const paragraphMult = settings.paragraphPauseMultiplier ?? 1;
-		if (paragraphMult > 1 && firstToken.context?.paragraphStart)
-			delay *= paragraphMult;
-		if (settings.contextPauseOnClose && lastToken.context?.closesAside)
-			delay *= 1.15;
+		const delay = chunkDelayMs(chunkTokens, finalWpm, settings);
 
 		if (!isReschedule) {
 			this.state.wordIndex += settings.chunkSize;
@@ -727,9 +758,93 @@ function smartWpm(base: number, word: string): number {
 	const isCommon = COMMON_WORDS.has(clean.toLowerCase());
 
 	if (isCommon || len <= 3) return Math.min(base * 1.3, 1600);
+	// Swedish and German compounds ("användbarhetsutvärdering") need far more time.
+	if (len >= 16) return Math.max(base * 0.5, 50);
+	if (len >= 12) return Math.max(base * 0.62, 50);
 	if (len >= 8) return Math.max(base * 0.75, 50);
 	if (len >= 6) return Math.max(base * 0.9, 50);
 	return base;
+}
+
+/**
+ * Minimum extra pause in ms after a comma, a sentence end and before a new
+ * paragraph, at the default multiplier. Proportional pauses shrink with speed,
+ * so without a floor sentences run together above ~600 WPM — the moment
+ * comprehension needs the break the most.
+ */
+export const PAUSE_FLOOR_MS = { comma: 80, sentence: 250, paragraph: 300 };
+
+const DEFAULT_PAUSE_MULTIPLIER = 2;
+const DEFAULT_PARAGRAPH_MULTIPLIER = 1.8;
+
+function effectiveWpm(
+	settings: ReaderSettings,
+	word: string,
+	index: number,
+	total: number,
+): number {
+	const base = settings.speedRampEnabled
+		? rampWpm(settings.wpm, settings.speedRampTarget, index, total)
+		: settings.wpm;
+	return settings.smartSpeed ? smartWpm(base, word) : base;
+}
+
+/** How long a chunk stays on screen, punctuation and paragraph pauses included. */
+export function chunkDelayMs(
+	chunk: WordToken[],
+	wpm: number,
+	settings: ReaderSettings,
+): number {
+	const first = chunk[0];
+	const last = chunk[chunk.length - 1];
+	const base = (60000 / wpm) * chunk.length;
+	const extra = last.pauseMultiplier - 1;
+
+	let pause = 0;
+	if (extra > 0) {
+		const isSentenceEnd = last.pauseMultiplier >= 2;
+		const mult = isSentenceEnd
+			? settings.sentencePauseMultiplier
+			: (settings.commaPauseMultiplier ?? settings.sentencePauseMultiplier);
+		const floor = isSentenceEnd
+			? PAUSE_FLOOR_MS.sentence
+			: PAUSE_FLOOR_MS.comma;
+		pause = base * extra * mult;
+		if (settings.pauseFloor ?? true) {
+			pause = Math.max(pause, (floor * mult) / DEFAULT_PAUSE_MULTIPLIER);
+		}
+	}
+	let delay = base + pause;
+
+	const paragraphMult = settings.paragraphPauseMultiplier ?? 1;
+	if (paragraphMult > 1 && first.context?.paragraphStart) {
+		let paragraphPause = delay * (paragraphMult - 1);
+		if (settings.pauseFloor ?? true) {
+			paragraphPause = Math.max(
+				paragraphPause,
+				(PAUSE_FLOOR_MS.paragraph * (paragraphMult - 1)) /
+					(DEFAULT_PARAGRAPH_MULTIPLIER - 1),
+			);
+		}
+		delay += paragraphPause;
+	}
+	if (settings.contextPauseOnClose && last.context?.closesAside) delay *= 1.15;
+	return delay;
+}
+
+function endsSentence(token: WordToken): boolean {
+	return token.pauseMultiplier >= 2;
+}
+
+/** First word of the sentence containing `index`. */
+export function sentenceStartIndex(tokens: WordToken[], index: number): number {
+	let i = Math.max(0, Math.min(index, tokens.length - 1));
+	while (i > 0) {
+		if (tokens[i].context?.paragraphStart) return i;
+		if (endsSentence(tokens[i - 1])) return i;
+		i--;
+	}
+	return 0;
 }
 
 const RAMP_WORDS = 30;

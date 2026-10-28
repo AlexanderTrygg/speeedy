@@ -21,6 +21,8 @@ export const DEFAULT_SETTINGS: ReaderSettings = {
 	focusPosition: "center",
 	pivotOffset: getDefaultPivotOffset(),
 	sentencePauseMultiplier: 2,
+	commaPauseMultiplier: 2,
+	pauseFloor: true,
 	showProgress: true,
 	focusModeEnabled: false,
 	theme: "system",

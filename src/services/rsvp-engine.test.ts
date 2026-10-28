@@ -1,7 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReaderSettings } from "../models/types.js";
 import { DEFAULT_SETTINGS } from "./defaults.js";
-import { computeOrp, RSVPEngine, tokenize } from "./rsvp-engine.js";
+import {
+	chunkDelayMs,
+	computeOrp,
+	PAUSE_FLOOR_MS,
+	RSVPEngine,
+	sentenceStartIndex,
+	tokenize,
+} from "./rsvp-engine.js";
 
 function makeSettings(overrides: Partial<ReaderSettings> = {}): ReaderSettings {
 	return { ...DEFAULT_SETTINGS, ...overrides };
@@ -425,5 +432,108 @@ describe("RSVPEngine", () => {
 			expect(listener).toHaveBeenCalledOnce();
 			engine.pause();
 		});
+	});
+});
+
+describe("chunkDelayMs", () => {
+	const word = (text: string) => tokenize(text)[0];
+
+	it("keeps the sentence pause above the floor at high WPM", () => {
+		const settings = makeSettings({ wpm: 900 });
+		const plain = chunkDelayMs([word("ord")], 900, settings);
+		const end = chunkDelayMs([word("slut.")], 900, settings);
+		expect(end - plain).toBeGreaterThanOrEqual(PAUSE_FLOOR_MS.sentence);
+	});
+
+	it("keeps proportional pauses at low WPM", () => {
+		const settings = makeSettings({ wpm: 200 });
+		const plain = chunkDelayMs([word("ord")], 200, settings);
+		const end = chunkDelayMs([word("slut.")], 200, settings);
+		// 300 ms per word × 1 extra × multiplier 2 = 600 ms, well above the floor
+		expect(end - plain).toBeCloseTo(600);
+	});
+
+	it("drops the floor when pauseFloor is off", () => {
+		const settings = makeSettings({ wpm: 900, pauseFloor: false });
+		const plain = chunkDelayMs([word("ord")], 900, settings);
+		const end = chunkDelayMs([word("slut.")], 900, settings);
+		expect(end - plain).toBeLessThan(PAUSE_FLOOR_MS.sentence);
+	});
+
+	it("tunes comma pauses separately from sentence pauses", () => {
+		const short = makeSettings({ commaPauseMultiplier: 1 });
+		const long = makeSettings({ commaPauseMultiplier: 3 });
+		const comma = [word("ord,")];
+		expect(chunkDelayMs(comma, 300, long)).toBeGreaterThan(
+			chunkDelayMs(comma, 300, short),
+		);
+		const end = [word("slut.")];
+		expect(chunkDelayMs(end, 300, long)).toBe(chunkDelayMs(end, 300, short));
+	});
+});
+
+describe("Swedish text", () => {
+	it("keeps å, ä and ö inside words", () => {
+		const tokens = tokenize("Användbarhet är svårt att mäta på förhand.");
+		expect(tokens.map((t) => t.text)).toEqual([
+			"Användbarhet",
+			"är",
+			"svårt",
+			"att",
+			"mäta",
+			"på",
+			"förhand.",
+		]);
+	});
+
+	it("gives long compounds more time with smart speed", () => {
+		const settings = makeSettings({ smartSpeed: true });
+		const engine = new RSVPEngine();
+		engine.load("användbarhetsutvärdering", settings);
+		const long = engine.getEstimatedRemainingMs(settings);
+		engine.load("bra", settings);
+		const short = engine.getEstimatedRemainingMs(settings);
+		expect(long).toBeGreaterThan(short * 2);
+	});
+});
+
+describe("sentence navigation", () => {
+	const text = "Första meningen här. Andra meningen kommer nu. Tredje.";
+	let engine: RSVPEngine;
+	const settings = makeSettings();
+
+	beforeEach(() => {
+		engine = new RSVPEngine();
+		engine.load(text, settings);
+	});
+
+	it("finds the first word of the current sentence", () => {
+		const tokens = tokenize(text);
+		expect(sentenceStartIndex(tokens, 5)).toBe(3);
+		expect(sentenceStartIndex(tokens, 3)).toBe(3);
+		expect(sentenceStartIndex(tokens, 1)).toBe(0);
+	});
+
+	it("rewinds to the start of the sentence", () => {
+		engine.seekToWord(5);
+		engine.rewindSentence();
+		expect(engine.getState().wordIndex).toBe(3);
+	});
+
+	it("goes to the previous sentence when already at a sentence start", () => {
+		engine.seekToWord(3);
+		engine.rewindSentence();
+		expect(engine.getState().wordIndex).toBe(0);
+	});
+
+	it("stops paragraph rewinds at the paragraph start", () => {
+		const tokens = tokenize("Ett stycke utan punkt\n\nNytt stycke här");
+		expect(sentenceStartIndex(tokens, 6)).toBe(4);
+	});
+
+	it("jumps forward to the next sentence", () => {
+		engine.seekToWord(1);
+		engine.forwardSentence();
+		expect(engine.getState().wordIndex).toBe(3);
 	});
 });

@@ -128,7 +128,7 @@ export class AppShell extends LitElement {
 				for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
 				const text = new TextDecoder().decode(bytes);
 
-				this.pendingDoc = createDocFromText(text, "Delad text");
+				this.pendingDoc = createDocFromText(text, "Shared Reading");
 				this.route = "reader";
 			} catch (e) {
 				console.error("Failed to parse read link:", e);
@@ -167,9 +167,7 @@ export class AppShell extends LitElement {
 		const isInternal =
 			e.reason instanceof TypeError || /cannot read propert/i.test(msg);
 		showToast(
-			isInternal
-				? "Something went wrong. Ladda om sidan."
-				: msg,
+			isInternal ? "Something went wrong. Refresh the page." : msg,
 			"error",
 		);
 	};

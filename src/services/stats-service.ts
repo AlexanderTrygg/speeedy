@@ -1,4 +1,5 @@
 import type { ReadingSession, UserProfile } from "../models/types.js";
+import { newId } from "../utils/ids.js";
 import { saveProfile } from "./storage-service.js";
 
 export function recordSession(
@@ -7,7 +8,7 @@ export function recordSession(
 ): UserProfile {
 	const newSession: ReadingSession = {
 		...session,
-		id: crypto.randomUUID(),
+		id: newId(),
 	};
 
 	const updatedSessions = [...profile.sessions, newSession].slice(-500);
