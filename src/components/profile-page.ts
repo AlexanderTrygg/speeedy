@@ -351,9 +351,6 @@ export class ProfilePage extends LitElement {
         <div class="border border-base-200 rounded-xl p-4">
           <div class="flex items-center justify-between mb-3">
             <span class="text-ui-body uppercase tracking-widest text-ui-muted font-semibold">Reading Progress</span>
-            <a href="#/benchmark" class="text-ui-body text-primary hover:underline underline-offset-2 font-semibold">
-              ${p.baselineWpm ? "Retest →" : "Take the test →"}
-            </a>
           </div>
           ${
 						p.baselineWpm

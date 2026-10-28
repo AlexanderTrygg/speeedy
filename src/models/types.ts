@@ -1,17 +1,4 @@
-export type Route =
-	| "landing"
-	| "app"
-	| "reader"
-	| "stats"
-	| "profile"
-	| "share"
-	| "privacy"
-	| "terms"
-	| "benchmark"
-	| "learn"
-	| "donate"
-	| "promote"
-	| "changelog";
+export type Route = "app" | "reader" | "stats" | "profile";
 
 export type FontFamily =
 	| "JetBrains Mono"

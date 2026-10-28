@@ -7,22 +7,11 @@ import { createDocFromText } from "../services/text-parser.js";
 import { applyTheme } from "../services/theme-service.js";
 
 import "./app-page.ts";
-import "./benchmark-test.ts";
-import "./changelog-page.ts";
-import "./donate-page.ts";
-import "./feedback-modal.ts";
-import "./learn-page.ts";
-import "./legal-page.ts";
-import "./marketing-page.ts";
 import "./profile-page.ts";
-import "./promote-page.ts";
 import "./global-tooltip.ts";
 import "./rsvp-reader.ts";
-import "./share-view.ts";
 import "./stats-dashboard.ts";
 import "./toast-container.ts";
-import "./onboarding-modal.ts";
-import { trackPageview } from "../utils/analytics.js";
 import { showToast } from "../utils/events.js";
 
 @customElement("app-shell")
@@ -31,8 +20,7 @@ export class AppShell extends LitElement {
 		return this;
 	}
 
-	@state() private route: Route = "landing";
-	@state() private shareParam = "";
+	@state() private route: Route = "app";
 	@state() private pendingDoc: ParsedDocument | null = null;
 	@state() private pendingSavedDocId: string | null = null;
 	@state() private pendingResumeIndex = 0;
@@ -131,10 +119,7 @@ export class AppShell extends LitElement {
 
 	private handleHashChange = (): void => {
 		const hash = window.location.hash.replace("#/", "").replace("#", "");
-		if (hash.startsWith("share/")) {
-			this.shareParam = hash.replace("share/", "");
-			this.route = "share";
-		} else if (hash.startsWith("read/")) {
+		if (hash.startsWith("read/")) {
 			const encoded = hash.replace("read/", "");
 			try {
 				const base64 = encoded.replace(/-/g, "+").replace(/_/g, "/");
@@ -143,41 +128,22 @@ export class AppShell extends LitElement {
 				for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
 				const text = new TextDecoder().decode(bytes);
 
-				this.pendingDoc = createDocFromText(text, "Shared Reading");
+				this.pendingDoc = createDocFromText(text, "Delad text");
 				this.route = "reader";
 			} catch (e) {
 				console.error("Failed to parse read link:", e);
-				this.route = "landing";
+				this.route = "app";
 			}
-		} else if (hash === "app") {
-			this.route = "app";
-		} else if (hash === "benchmark") {
-			this.route = "benchmark";
 		} else if (hash === "stats") {
 			this.route = "stats";
 		} else if (hash === "profile") {
 			this.route = "profile";
 		} else if (hash === "reader") {
 			this.route = "reader";
-		} else if (hash === "privacy") {
-			this.route = "privacy";
-		} else if (hash === "terms") {
-			this.route = "terms";
-		} else if (hash === "learn") {
-			this.route = "learn";
-		} else if (hash === "donate") {
-			this.route = "donate";
-		} else if (hash === "promote") {
-			this.route = "promote";
-		} else if (hash === "changelog") {
-			this.route = "changelog";
 		} else {
-			this.route = "landing";
+			this.route = "app";
 		}
 		window.scrollTo(0, 0);
-		// Hash SPA: Umami only auto-tracks the first load.
-		const path = hash ? `/${hash.split("/")[0]}` : "/";
-		trackPageview(path);
 	};
 
 	private handleNavigate = (e: Event): void => {
@@ -202,7 +168,7 @@ export class AppShell extends LitElement {
 			e.reason instanceof TypeError || /cannot read propert/i.test(msg);
 		showToast(
 			isInternal
-				? "Something went wrong. Refresh the page — if it keeps happening, send us feedback."
+				? "Something went wrong. Ladda om sidan."
 				: msg,
 			"error",
 		);
@@ -230,20 +196,14 @@ export class AppShell extends LitElement {
           ${this.renderRoute()}
         </div>
 
-        <feedback-modal></feedback-modal>
         <toast-container></toast-container>
         <global-tooltip></global-tooltip>
-        <onboarding-modal .profile=${this.profile} .currentRoute=${this.route}></onboarding-modal>
       </div>
     `;
 	}
 
 	private renderRoute() {
 		switch (this.route) {
-			case "app":
-				return html`<app-page .profile=${this.profile}></app-page>`;
-			case "benchmark":
-				return html`<benchmark-test .profile=${this.profile}></benchmark-test>`;
 			case "reader":
 				return html`
           <rsvp-reader
@@ -257,22 +217,8 @@ export class AppShell extends LitElement {
 				return html`<stats-dashboard .profile=${this.profile}></stats-dashboard>`;
 			case "profile":
 				return html`<profile-page .profile=${this.profile}></profile-page>`;
-			case "share":
-				return html`<share-view .encoded=${this.shareParam}></share-view>`;
-			case "privacy":
-				return html`<legal-page page="privacy"></legal-page>`;
-			case "terms":
-				return html`<legal-page page="terms"></legal-page>`;
-			case "learn":
-				return html`<learn-page></learn-page>`;
-			case "donate":
-				return html`<donate-page></donate-page>`;
-			case "promote":
-				return html`<promote-page></promote-page>`;
-			case "changelog":
-				return html`<changelog-page></changelog-page>`;
 			default:
-				return html`<marketing-page .profile=${this.profile}></marketing-page>`;
+				return html`<app-page .profile=${this.profile}></app-page>`;
 		}
 	}
 }

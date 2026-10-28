@@ -33,6 +33,3 @@ export function showToast(message: string, type: ToastType = "info"): void {
 	);
 }
 
-export function openFeedback(): void {
-	window.dispatchEvent(new CustomEvent("speeedy:open-feedback"));
-}

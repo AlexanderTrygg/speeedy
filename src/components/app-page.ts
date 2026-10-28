@@ -19,13 +19,10 @@ import { trackEvent } from "../utils/analytics.js";
 import {
 	emitProfileUpdated,
 	navigate,
-	openFeedback,
 	showToast,
 } from "../utils/events.js";
 import { icon } from "../utils/icons.js";
 import { countWords, estimateReadingMinutes } from "../utils/text-utils.js";
-import "./donation-banner.ts";
-import "./github-star-prompt.ts";
 import "./start-preview-dialog.ts";
 import "./ui/file-uploader.ts";
 import "./ui/input.ts";
@@ -270,13 +267,6 @@ export class AppPage extends LitElement {
 
         <nav class="px-4 md:px-10 py-3 md:py-4 flex items-center justify-between shrink-0 gap-2 min-h-[48px]">
           <div class="flex items-center gap-2 md:gap-3 min-w-0">
-            <a href="#/" class="btn btn-ghost btn-sm text-ui-muted gap-2 hover:text-base-content min-h-[44px] touch-manipulation">
-              <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-              </svg>
-              <span class="hidden sm:inline">Landing Page</span>
-            </a>
-            <span class="text-ui-muted-subtle text-sm select-none hidden sm:inline" aria-hidden="true">/</span>
             <span class="text-sm md:text-base tracking-[0.2em] md:tracking-[0.25em] font-light text-base-content select-none truncate">speeedy</span>
           </div>
           <div class="flex items-center gap-0.5 sm:gap-1 shrink-0">
@@ -295,13 +285,6 @@ export class AppPage extends LitElement {
               </svg>
               <span class="hidden sm:inline">Stats</span>
             </button>
-            <button type="button" class="btn btn-ghost btn-sm gap-2 min-h-[44px] min-w-[44px] touch-manipulation" @click=${openFeedback}>
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
-              </svg>
-              <span class="hidden sm:inline">Feedback</span>
-            </button>
             <button
               type="button"
               class="btn btn-ghost btn-sm btn-circle min-h-[44px] min-w-[44px] touch-manipulation"
@@ -314,8 +297,6 @@ export class AppPage extends LitElement {
           </div>
         </nav>
 
-        <github-star-prompt .profile=${this.profile}></github-star-prompt>
-        <donation-banner .profile=${this.profile}></donation-banner>
 
         <main class="flex-1 flex flex-col items-center justify-center px-4 min-h-0 overflow-auto">
 
@@ -344,7 +325,7 @@ export class AppPage extends LitElement {
               <div class="rounded-xl bg-primary/8 border border-primary/20 px-4 py-3 flex items-start gap-3 relative">
                 <div class="text-sm text-ui-muted font-light leading-relaxed pr-8">
                   A demo is loaded — hit <strong class="font-medium text-base-content">Begin Reading</strong> to try RSVP,
-                  or paste your own text. <a href="#/benchmark" class="text-primary hover:underline underline-offset-2">Find your WPM →</a>
+                  or paste your own text.
                 </div>
                 <button
                   type="button"
@@ -421,12 +402,6 @@ export class AppPage extends LitElement {
 
         <footer class="shrink-0 px-4 md:px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-2 border-t border-base-200/60">
           <span class="text-xs tracking-[0.3em] text-ui-muted-subtle font-light">speeedy</span>
-          <div class="flex flex-wrap justify-center gap-4 sm:gap-6 text-xs">
-            <a href="#/learn" class="text-ui-muted hover:text-base-content transition-colors">Learn more about RSVP</a>
-            <a href="#/promote" class="text-ui-muted hover:text-base-content transition-colors underline decoration-primary/30 underline-offset-4">Speeedy for Bloggers</a>
-            <a href="#/privacy" class="text-ui-muted hover:text-base-content transition-colors">Privacy</a>
-            <a href="#/terms" class="text-ui-muted hover:text-base-content transition-colors">Terms</a>
-          </div>
         </footer>
       </div>
     `;
