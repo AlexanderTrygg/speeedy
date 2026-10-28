@@ -254,7 +254,7 @@ export class WellnessOverlay extends LitElement {
 		const isBreak = this.phase === "break" || this.phase === "longbreak";
 		const phaseColor = isBreak ? "oklch(var(--su))" : "oklch(var(--p))";
 		const phaseLabel =
-			this.phase === "longbreak" ? "Long break" : isBreak ? "Break" : "Focus";
+			this.phase === "longbreak" ? "Lång paus" : isBreak ? "Paus" : "Fokus";
 
 		return html`
 			<div class="flex items-center gap-2">
@@ -279,8 +279,8 @@ export class WellnessOverlay extends LitElement {
 						<button
 							class="btn btn-ghost btn-xs px-1 min-h-0 h-6 text-base-content/30 hover:text-error transition-colors"
 							@click=${this.stopTimer}
-							title="Stop timer"
-							aria-label="Stop Pomodoro timer"
+							title="Stoppa timern"
+							aria-label="Stoppa Pomodoro-timern"
 						>
 							<svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
@@ -295,8 +295,8 @@ export class WellnessOverlay extends LitElement {
 						@click=${() => {
 							this.showConfig = true;
 						}}
-						title="Start Pomodoro timer"
-						aria-label="Open Pomodoro timer settings"
+						title="Starta Pomodoro-timer"
+						aria-label="Inställningar för Pomodoro-timer"
 					>
 						<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -324,14 +324,14 @@ export class WellnessOverlay extends LitElement {
 									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
 								</svg>
 							</div>
-							<h3 class="font-semibold text-sm text-base-content">Pomodoro Timer</h3>
+							<h3 class="font-semibold text-sm text-base-content">Pomodoro-timer</h3>
 						</div>
 						<button
 							class="btn btn-ghost btn-xs btn-circle text-base-content/40 hover:text-base-content"
 							@click=${() => {
 								this.showConfig = false;
 							}}
-							aria-label="Close"
+							aria-label="Stäng"
 						>
 							<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -344,7 +344,7 @@ export class WellnessOverlay extends LitElement {
 						<!-- Timer grid -->
 						<div class="grid grid-cols-2 gap-3">
 							<label class="flex flex-col gap-1.5">
-								<span class="text-xs font-medium text-base-content/50 uppercase tracking-wide">Focus</span>
+								<span class="text-xs font-medium text-base-content/50 uppercase tracking-wide">Fokus</span>
 								<div class="relative">
 									<input
 										type="number" min="5" max="120"
@@ -371,7 +371,7 @@ export class WellnessOverlay extends LitElement {
 								</div>
 							</label>
 							<label class="flex flex-col gap-1.5">
-								<span class="text-xs font-medium text-base-content/50 uppercase tracking-wide">Break</span>
+								<span class="text-xs font-medium text-base-content/50 uppercase tracking-wide">Paus</span>
 								<div class="relative">
 									<input
 										type="number" min="1" max="60"
@@ -398,7 +398,7 @@ export class WellnessOverlay extends LitElement {
 								</div>
 							</label>
 							<label class="flex flex-col gap-1.5">
-								<span class="text-xs font-medium text-base-content/50 uppercase tracking-wide">Long break</span>
+								<span class="text-xs font-medium text-base-content/50 uppercase tracking-wide">Lång paus</span>
 								<div class="relative">
 									<input
 										type="number" min="5" max="60"
@@ -425,7 +425,7 @@ export class WellnessOverlay extends LitElement {
 								</div>
 							</label>
 							<label class="flex flex-col gap-1.5">
-								<span class="text-xs font-medium text-base-content/50 uppercase tracking-wide">Sessions</span>
+								<span class="text-xs font-medium text-base-content/50 uppercase tracking-wide">Pass</span>
 								<div class="relative">
 									<input
 										type="number" min="2" max="8"
@@ -457,7 +457,7 @@ export class WellnessOverlay extends LitElement {
 							this.readMinutes < 20
 								? html`
 							<p class="text-xs text-base-content/40 leading-relaxed bg-base-200/50 rounded-lg px-3 py-2">
-								Set focus to 20+ min to enable the 20-20-20 eye rest reminder.
+								Sätt fokus till minst 20 min för att få påminnelse om att vila ögonen.
 							</p>
 						`
 								: ""
@@ -470,7 +470,7 @@ export class WellnessOverlay extends LitElement {
 								@click=${() => {
 									this.showConfig = false;
 								}}
-							>Cancel</button>
+							>Avbryt</button>
 							<button
 								class="btn btn-primary btn-sm flex-1"
 								@click=${() => {
@@ -482,7 +482,7 @@ export class WellnessOverlay extends LitElement {
 									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
 									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
 								</svg>
-								Start
+								Starta
 							</button>
 						</div>
 					</div>
@@ -498,7 +498,7 @@ export class WellnessOverlay extends LitElement {
 						<div class="text-6xl">${this.phase === "longbreak" ? "🌿" : "☕"}</div>
 						<div>
 							<h2 class="text-2xl font-bold text-base-content mb-1">
-								${this.phase === "longbreak" ? "Long Break!" : "Break Time!"}
+								${this.phase === "longbreak" ? "Lång paus!" : "Dags för paus!"}
 							</h2>
 							<p class="text-base-content/60 text-sm">
 								${
@@ -535,7 +535,7 @@ export class WellnessOverlay extends LitElement {
 							</svg>
 							<div class="absolute flex flex-col items-center">
 								<span class="font-mono text-2xl font-bold text-base-content">${this.formatTime(this.secondsLeft)}</span>
-								<span class="text-xs text-base-content/40 uppercase tracking-wide">remaining</span>
+								<span class="text-xs text-base-content/40 uppercase tracking-wide">kvar</span>
 							</div>
 						</div>
 
@@ -543,12 +543,12 @@ export class WellnessOverlay extends LitElement {
 							<button
 								class="btn btn-ghost btn-sm"
 								@click=${this.extendBreak}
-								title="Add 5 more minutes"
+								title="Lägg till 5 minuter"
 							>+5 min</button>
 							<button
 								class="btn btn-primary btn-sm"
 								@click=${this.skipBreak}
-							>Skip Break</button>
+							>Hoppa över pausen</button>
 						</div>
 
 						${
@@ -582,8 +582,8 @@ export class WellnessOverlay extends LitElement {
 					<div class="alert shadow-lg max-w-xs border border-base-200 bg-base-100/95 backdrop-blur-sm">
 						<span class="text-lg">👁</span>
 						<div>
-							<div class="font-medium text-sm">Eye Rest Reminder</div>
-							<div class="text-xs text-base-content/60">Look 20 feet away for 20 seconds.</div>
+							<div class="font-medium text-sm">Vila ögonen</div>
+							<div class="text-xs text-base-content/60">Titta sex meter bort i 20 sekunder.</div>
 						</div>
 					</div>
 				</div>

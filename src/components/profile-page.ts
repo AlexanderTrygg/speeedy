@@ -6,7 +6,6 @@ import {
 	Clock,
 	Download,
 	Play,
-	Share2,
 	Trash2,
 	Upload,
 	X,
@@ -18,9 +17,7 @@ import type {
 } from "../models/types.js";
 import { AVATAR_EMOJIS } from "../services/defaults.js";
 import {
-	buildShareData,
 	downloadProfileBackup,
-	generateShareUrl,
 	loadProfileFromFile,
 } from "../services/profile-service.js";
 import {
@@ -55,7 +52,6 @@ export class ProfilePage extends LitElement {
 	@state() private nameInput = "";
 	@state() private showShareCard = false;
 	@state() private shareUrl = "";
-	@state() private shareIncludeAvatar = false;
 	@state() private shareData: import("../models/types.js").ShareData | null =
 		null;
 	@state() private savingPng = false;
@@ -70,7 +66,6 @@ export class ProfilePage extends LitElement {
 	@state() private cropZoom = 1;
 	@state() private cropOffsetX = 0;
 	@state() private cropOffsetY = 0;
-	@state() private sharePrivacyAcknowledged = false;
 	private pendingImg: HTMLImageElement | null = null;
 	private _dragActive = false;
 	private _dragStartX = 0;
@@ -145,13 +140,13 @@ export class ProfilePage extends LitElement {
 	}
 
 	private renderNav() {
-		return html`<speeedy-page-nav label="Profile" back-route="app"></speeedy-page-nav>`;
+		return html`<speeedy-page-nav label="Profil" back-route="app"></speeedy-page-nav>`;
 	}
 
 	private renderSectionTabs() {
 		const sections = [
-			{ id: "profile", label: "Profile" },
-			{ id: "library", label: "Library" },
+			{ id: "profile", label: "Profil" },
+			{ id: "library", label: "Bibliotek" },
 			{ id: "data", label: "Data" },
 		] as const;
 		return html`
@@ -181,7 +176,7 @@ export class ProfilePage extends LitElement {
           <div class="w-20 h-20 rounded-full bg-base-200 flex items-center justify-center overflow-hidden select-none shrink-0 border border-base-200">
             ${
 							hasAvatarImage && p.avatarImage
-								? html`<img src=${p.avatarImage} alt="Profile avatar" class="w-full h-full object-cover" />`
+								? html`<img src=${p.avatarImage} alt="Profilbild" class="w-full h-full object-cover" />`
 								: html`<span class="text-4xl">${p.avatarEmoji}</span>`
 						}
           </div>
@@ -190,7 +185,7 @@ export class ProfilePage extends LitElement {
 							this.editingName
 								? html`
             <div class="flex items-center gap-2">
-              <label for="display-name-input" class="sr-only">Display name</label>
+              <label for="display-name-input" class="sr-only">Namn</label>
               <input
                 id="display-name-input"
                 type="text"
@@ -217,7 +212,7 @@ export class ProfilePage extends LitElement {
 									displayName: this.nameInput.trim() || p.displayName,
 								});
 								this.editingName = false;
-							}}>Save</button>
+							}}>Spara</button>
             </div>
           `
 								: html`
@@ -227,7 +222,7 @@ export class ProfilePage extends LitElement {
 								this.nameInput = p.displayName;
 								this.editingName = true;
 							}}
-              aria-label="Edit display name"
+              aria-label="Ändra namn"
             >
               <span class="text-ui-title font-semibold">${p.displayName}</span>
               <svg class="w-3.5 h-3.5 text-ui-muted-subtle group-hover:text-ui-muted transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -238,7 +233,7 @@ export class ProfilePage extends LitElement {
           `
 						}
             <p class="text-ui-body text-ui-muted">
-              Member since ${new Date(p.createdAt).toLocaleDateString(undefined, { year: "numeric", month: "long" })}
+              Medlem sedan ${new Date(p.createdAt).toLocaleDateString("sv", { year: "numeric", month: "long" })}
             </p>
           </div>
         </div>
@@ -247,11 +242,11 @@ export class ProfilePage extends LitElement {
         <div class="flex flex-col gap-5">
           <!-- Upload image -->
           <div class="flex flex-col gap-2">
-            <span class="text-ui-body uppercase tracking-widest text-ui-muted font-semibold">Profile Image</span>
+            <span class="text-ui-body uppercase tracking-widest text-ui-muted font-semibold">Profilbild</span>
             <div class="flex items-center gap-2 flex-wrap">
               <label class="btn btn-outline btn-sm gap-2 cursor-pointer">
                 ${icon(Upload, "w-4 h-4")}
-                ${this.isUploadingAvatar ? "Uploading..." : hasAvatarImage ? "Change image" : "Upload image"}
+                ${this.isUploadingAvatar ? "Laddar upp…" : hasAvatarImage ? "Byt bild" : "Ladda upp bild"}
                 <input
                   type="file"
                   accept="image/*"
@@ -266,20 +261,20 @@ export class ProfilePage extends LitElement {
                 class="btn btn-ghost btn-sm text-error"
                 @click=${() => this.updateProfile({ avatarImage: null })}
               >
-                Remove
+                Ta bort
               </button>
             `
 									: ""
 							}
             </div>
             <p class="text-ui-body text-ui-muted-subtle">
-              Stored only in your browser.
+              Sparas bara i din webbläsare.
             </p>
           </div>
 
           <!-- Emoji Picker -->
           <div class="flex flex-col gap-2">
-            <span class="text-ui-body uppercase tracking-widest text-ui-muted font-semibold">Emoji Avatar</span>
+            <span class="text-ui-body uppercase tracking-widest text-ui-muted font-semibold">Emoji</span>
 
             <!-- Quick presets -->
             <div class="flex flex-wrap gap-1.5">
@@ -293,7 +288,7 @@ export class ProfilePage extends LitElement {
 													: "bg-base-200/60 hover:bg-base-200"
 											}"
                     @click=${() => this.updateProfile({ avatarEmoji: emoji })}
-                    aria-label="Set avatar to ${emoji}"
+                    aria-label="Välj ${emoji}"
                     aria-pressed="${p.avatarEmoji === emoji}"
                   >${emoji}</button>
                 `,
@@ -302,7 +297,7 @@ export class ProfilePage extends LitElement {
 
             <!-- Custom emoji input -->
             <div class="flex items-center gap-2 mt-1">
-              <label for="custom-emoji-input" class="sr-only">Custom emoji</label>
+              <label for="custom-emoji-input" class="sr-only">Egen emoji</label>
               <input
                 id="custom-emoji-input"
                 type="text"
@@ -322,7 +317,7 @@ export class ProfilePage extends LitElement {
 								}}
               />
               <span class="text-ui-body text-ui-muted">
-                Or type / paste any emoji you like.
+                Eller skriv/klistra in valfri emoji.
               </span>
             </div>
           </div>
@@ -330,174 +325,24 @@ export class ProfilePage extends LitElement {
 
         <!-- Stats Summary -->
         <div class="flex flex-col gap-2">
-          <span class="text-ui-body uppercase tracking-widest text-ui-muted font-semibold">Reading Stats</span>
+          <span class="text-ui-body uppercase tracking-widest text-ui-muted font-semibold">Läsning</span>
           <div class="grid grid-cols-3 gap-3">
             <div class="border border-base-200 rounded-xl px-4 py-3 text-center">
               <div class="text-ui-title font-semibold tabular-nums">${formatNumber(p.totalWordsRead)}</div>
-              <div class="text-ui-body text-ui-muted uppercase tracking-widest mt-0.5">Words</div>
+              <div class="text-ui-body text-ui-muted uppercase tracking-widest mt-0.5">Ord</div>
             </div>
             <div class="border border-primary/20 bg-primary/5 rounded-xl px-4 py-3 text-center">
               <div class="text-ui-title font-semibold tabular-nums">${getAverageWpm(p) || "—"}</div>
-              <div class="text-ui-body text-primary uppercase tracking-widest mt-0.5 font-semibold">Avg WPM</div>
+              <div class="text-ui-body text-primary uppercase tracking-widest mt-0.5 font-semibold">Snitt ord/min</div>
             </div>
             <div class="border border-base-200 rounded-xl px-4 py-3 text-center">
               <div class="text-ui-title font-semibold tabular-nums">${formatDuration(p.totalTimeMs)}</div>
-              <div class="text-ui-body text-ui-muted uppercase tracking-widest mt-0.5">Time</div>
+              <div class="text-ui-body text-ui-muted uppercase tracking-widest mt-0.5">Tid</div>
             </div>
           </div>
         </div>
 
-        <!-- Baseline + Improvement -->
-        <div class="border border-base-200 rounded-xl p-4">
-          <div class="flex items-center justify-between mb-3">
-            <span class="text-ui-body uppercase tracking-widest text-ui-muted font-semibold">Reading Progress</span>
-          </div>
-          ${
-						p.baselineWpm
-							? html`
-            <div class="grid grid-cols-3 gap-3">
-              <div class="text-center">
-                <div class="text-ui-title font-semibold">${p.baselineWpm}</div>
-                <div class="text-ui-body text-ui-muted mt-0.5">Baseline WPM</div>
-              </div>
-              <div class="text-center">
-                <div class="text-ui-title font-semibold">${getAverageWpm(p) || "—"}</div>
-                <div class="text-ui-body text-ui-muted mt-0.5">Current Avg WPM</div>
-              </div>
-              <div class="text-center">
-                ${
-									getAverageWpm(p) && getAverageWpm(p) > p.baselineWpm
-										? html`
-                  <div class="text-ui-title font-semibold text-success">
-                    +${Math.round(((getAverageWpm(p) - p.baselineWpm) / p.baselineWpm) * 100)}%
-                  </div>
-                  <div class="text-ui-body text-success mt-0.5 font-semibold">Improvement</div>
-                `
-										: getAverageWpm(p) && getAverageWpm(p) < p.baselineWpm
-											? html`
-                  <div class="text-ui-title font-semibold text-ui-muted">—</div>
-                  <div class="text-ui-body text-ui-muted mt-0.5">Keep reading!</div>
-                `
-											: html`
-                  <div class="text-ui-title font-semibold text-ui-muted">—</div>
-                  <div class="text-ui-body text-ui-muted mt-0.5">More sessions needed</div>
-                `
-								}
-              </div>
-            </div>
-            ${
-							p.baselineComprehension !== null
-								? html`
-              <div class="mt-2 pt-2 border-t border-base-200/60 text-ui-body text-ui-muted flex items-center justify-between">
-                <span>Baseline comprehension</span>
-                <span class="font-mono">${p.baselineComprehension}%</span>
-              </div>
-            `
-								: ""
-						}
-          `
-							: html`
-            <p class="text-ui-body text-ui-muted">
-              No baseline yet. Take the reading test to measure your WPM and comprehension — then track your improvement over time.
-            </p>
-          `
-					}
-        </div>
-
-        <!-- Share -->
-        <div class="flex flex-col gap-3">
-          <span class="text-ui-body uppercase tracking-widest text-ui-muted font-semibold">Share Profile</span>
-
-          <div class="rounded-xl border border-warning/35 bg-warning/8 px-4 py-3 flex flex-col gap-2">
-            <p class="text-ui-body font-semibold uppercase tracking-widest text-warning">⚠ Privacy notice</p>
-            <p class="text-ui-body text-ui-muted leading-relaxed">
-              Shared profile links embed your selected stats directly in the URL.
-              Analytics scripts, browser extensions, screenshots, or anyone you send the link to
-              may be able to read any personal details included in that URL.
-              Only share a link with personal information if you are comfortable with that.
-            </p>
-          </div>
-
-          <!-- Acknowledgment checkbox -->
-          <label class="flex items-start gap-2.5 cursor-pointer">
-            <input
-              type="checkbox"
-              class="checkbox checkbox-xs mt-0.5 shrink-0"
-              .checked=${this.sharePrivacyAcknowledged}
-              @change=${(event: Event) => {
-								this.sharePrivacyAcknowledged = (
-									event.target as HTMLInputElement
-								).checked;
-								if (!this.sharePrivacyAcknowledged)
-									this.shareIncludeAvatar = false;
-							}}
-            />
-            <span class="text-ui-body text-ui-muted leading-relaxed">
-              I understand that personal details in a shared link may be visible to analytics tools or anyone with the URL.
-            </span>
-          </label>
-
-          <!-- Avatar opt-in — only shown after acknowledgment -->
-          ${
-						this.sharePrivacyAcknowledged
-							? html`
-            <label class="flex items-start gap-2.5 cursor-pointer pl-1">
-              <input
-                type="checkbox"
-                class="checkbox checkbox-xs mt-0.5 shrink-0"
-                .checked=${this.shareIncludeAvatar}
-                @change=${(event: Event) => {
-									this.shareIncludeAvatar = (
-										event.target as HTMLInputElement
-									).checked;
-								}}
-              />
-              <span class="text-ui-body text-ui-muted leading-relaxed">
-                Include profile image in the shared card and link — increases privacy risk and may make the URL much longer.
-              </span>
-            </label>
-          `
-							: ""
-					}
-
-          <div class="flex gap-2 flex-wrap">
-            <button
-              class="btn btn-outline btn-sm gap-2"
-              data-umami-event="share-card-generated"
-              @click=${() => {
-								const data = buildShareData(this.profile);
-								if (
-									this.shareIncludeAvatar &&
-									this.sharePrivacyAcknowledged &&
-									this.profile.avatarImage
-								) {
-									data.avatarImage = this.profile.avatarImage;
-								}
-								this.shareData = data;
-								this.shareUrl = generateShareUrl(data);
-								this.showShareCard = true;
-								trackEvent("share-card-generated");
-							}}
-            >
-              ${icon(Share2, "w-4 h-4")}
-              Share Stats Card
-            </button>
-            <button
-              class="btn btn-ghost btn-sm"
-              @click=${() => navigate("stats")}
-            >View Full Stats →</button>
-          </div>
-
-          ${
-						!this.sharePrivacyAcknowledged
-							? html`
-            <p class="text-ui-body text-warning/90 font-normal">
-              Acknowledge the privacy notice above to enable personal info in shared links.
-            </p>
-          `
-							: ""
-					}
-        </div>
+        <button class="btn btn-ghost btn-sm self-start" @click=${() => navigate("stats")}>Visa all statistik →</button>
       </div>
     `;
 	}
@@ -507,8 +352,8 @@ export class ProfilePage extends LitElement {
       <div class="flex flex-col gap-5 pb-8">
         <!-- Export -->
         <div class="border border-base-200 rounded-xl p-5">
-            <h3 class="font-semibold mb-1 text-base-content">Export Profile</h3>
-            <p class="text-ui-body text-ui-muted mb-4 leading-relaxed">Download a <code class="text-ui-body font-mono bg-base-200 px-1 py-0.5 rounded">.speeedy</code> backup file with all your settings, history, and stats.</p>
+            <h3 class="font-semibold mb-1 text-base-content">Exportera profil</h3>
+            <p class="text-ui-body text-ui-muted mb-4 leading-relaxed">Ladda ner en säkerhetskopia (<code class="text-ui-body font-mono bg-base-200 px-1 py-0.5 rounded">.speeedy</code>) med inställningar, historik och statistik.</p>
             <button
               class="btn btn-outline btn-sm w-fit gap-2"
               data-umami-event="profile-exported"
@@ -518,17 +363,17 @@ export class ProfilePage extends LitElement {
 							}}
             >
               ${icon(Download, "w-4 h-4")}
-              Download .speeedy
+              Ladda ner .speeedy
             </button>
         </div>
 
         <!-- Import -->
         <div class="border border-base-200 rounded-xl p-5">
-            <h3 class="font-semibold mb-1 text-base-content">Import Profile</h3>
-            <p class="text-ui-body text-ui-muted mb-4 leading-relaxed">Restore from a previously exported <code class="text-ui-body font-mono bg-base-200 px-1 py-0.5 rounded">.speeedy</code> file. This will overwrite your current data.</p>
+            <h3 class="font-semibold mb-1 text-base-content">Importera profil</h3>
+            <p class="text-ui-body text-ui-muted mb-4 leading-relaxed">Återställ från en tidigare exporterad <code class="text-ui-body font-mono bg-base-200 px-1 py-0.5 rounded">.speeedy</code>-fil. Det du har nu skrivs över.</p>
             <label class="btn btn-outline btn-sm w-fit gap-2 cursor-pointer">
               ${icon(Upload, "w-4 h-4")}
-              Import .speeedy
+              Importera .speeedy
               <input
                 type="file"
                 accept=".speeedy,.json"
@@ -546,14 +391,14 @@ export class ProfilePage extends LitElement {
 
         <!-- Reset -->
         <div class="border border-error/20 rounded-xl p-5">
-            <h3 class="font-semibold text-error mb-1">Reset All Data</h3>
-            <p class="text-ui-body text-ui-muted mb-4 leading-relaxed">Permanently delete all reading history, settings, and stats. This cannot be undone.</p>
+            <h3 class="font-semibold text-error mb-1">Nollställ statistik</h3>
+            <p class="text-ui-body text-ui-muted mb-4 leading-relaxed">Raderar läshistorik och statistik för gott. Går inte att ångra.</p>
             <button
               class="btn btn-error btn-outline btn-sm w-fit"
               @click=${async () => {
 								if (
 									confirm(
-										"Are you sure? This will permanently delete all your data.",
+										"Är du säker? Läshistorik och statistik raderas för gott.",
 									)
 								) {
 									const fresh = {
@@ -568,7 +413,7 @@ export class ProfilePage extends LitElement {
 									emitProfileUpdated(fresh);
 								}
 							}}
-            >Reset Data</button>
+            >Nollställ</button>
         </div>
       </div>
     `;
@@ -585,8 +430,8 @@ export class ProfilePage extends LitElement {
 			<div class="mb-4">
 				<speeedy-file-uploader
 					compact
-					label="Add a document to your library"
-					hint="PDF · DOCX · TXT · EPUB · RTF · HTML · ODT · and more"
+					label="Lägg till ett dokument i biblioteket"
+					hint="PDF · DOCX · TXT · EPUB · RTF · HTML · ODT · med flera"
 					@file-parsed=${this.handleDocFileParsed}
 					@file-error=${this.handleDocFileError}
 				></speeedy-file-uploader>
@@ -617,8 +462,8 @@ export class ProfilePage extends LitElement {
 					${uploaderBlock}
 					<div class="text-center py-8 opacity-60">
 						${icon(BookOpen, "w-8 h-8 mx-auto mb-3 opacity-50")}
-						<p class="text-ui-body text-ui-muted">Your library is empty.</p>
-						<button class="btn btn-ghost btn-sm mt-2" @click=${() => navigate("app")}>Read something</button>
+						<p class="text-ui-body text-ui-muted">Biblioteket är tomt.</p>
+						<button class="btn btn-ghost btn-sm mt-2" @click=${() => navigate("app")}>Läs något</button>
 					</div>
 				</div>
 			`;
@@ -630,7 +475,7 @@ export class ProfilePage extends LitElement {
 				<div class="flex items-center justify-between mb-1 px-1">
 					<div class="flex items-center gap-2">
 						${icon(BookOpen, "w-4 h-4 text-ui-muted-subtle")}
-						<span class="text-ui-body font-semibold text-base-content">Reading History</span>
+						<span class="text-ui-body font-semibold text-base-content">Läshistorik</span>
 					</div>
 					<span class="text-ui-body text-ui-muted">${this.savedDocs.length} total</span>
 				</div>
@@ -651,7 +496,7 @@ export class ProfilePage extends LitElement {
 								window.scrollTo({ top: 0, behavior: "smooth" });
 							}}
 						>
-							${icon(ArrowLeft, "w-3.5 h-3.5")} Prev
+							${icon(ArrowLeft, "w-3.5 h-3.5")} Föregående
 						</button>
 						<span class="text-ui-body font-mono text-ui-muted bg-base-200 px-3 py-1 rounded-full">
 							${this.libraryPage} / ${totalPages}
@@ -664,7 +509,7 @@ export class ProfilePage extends LitElement {
 								window.scrollTo({ top: 0, behavior: "smooth" });
 							}}
 						>
-							Next <svg class="w-3.5 h-3.5 rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+							Nästa <svg class="w-3.5 h-3.5 rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
 						</button>
 					</div>
 				`
@@ -677,7 +522,7 @@ export class ProfilePage extends LitElement {
 	private renderDocCard(doc: SavedDocument) {
 		const pct = doc.completionPercent;
 		const resumeLabel =
-			pct >= 98 ? "Read again" : pct > 0 ? `Resume ${pct}%` : "Start";
+			pct >= 98 ? "Läs igen" : pct > 0 ? `Fortsätt ${pct} %` : "Läs";
 		const date = new Date(doc.savedAt).toLocaleDateString(undefined, {
 			year: "numeric",
 			month: "short",
@@ -690,7 +535,7 @@ export class ProfilePage extends LitElement {
           <div class="text-ui-body font-semibold text-base-content truncate pr-4">${doc.title}</div>
           <div class="flex items-center gap-2 mt-1">
             ${icon(Clock, "w-3 h-3 text-ui-muted-subtle")}
-            <span class="text-ui-body text-ui-muted">${date} · ${doc.wordCount.toLocaleString()} words</span>
+            <span class="text-ui-body text-ui-muted">${date} · ${doc.wordCount.toLocaleString()} ord</span>
           </div>
           ${
 						pct > 0 && pct < 98
@@ -705,7 +550,7 @@ export class ProfilePage extends LitElement {
         <div class="flex items-center gap-1.5 shrink-0 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             class="btn btn-ghost btn-sm btn-circle text-error/60 hover:text-error hover:bg-error/10"
-            title="Delete"
+            title="Ta bort"
             @click=${async () => {
 							await deleteSavedDocument(doc.id);
 							this.savedDocs = await getSavedDocuments();
@@ -825,7 +670,7 @@ export class ProfilePage extends LitElement {
 			a.download = `speeedy-stats-${this.profile.displayName.replace(/\s+/g, "-")}.png`;
 			a.click();
 		} catch {
-			alert("Could not save the image. Please try again.");
+			alert("Kunde inte spara bilden. Försök igen.");
 		} finally {
 			this.savingPng = false;
 		}
@@ -835,7 +680,7 @@ export class ProfilePage extends LitElement {
 		const file = (e.target as HTMLInputElement).files?.[0];
 		if (!file) return;
 		if (!file.type.startsWith("image/")) {
-			alert("Please choose an image file.");
+			alert("Välj en bildfil.");
 			return;
 		}
 
@@ -860,13 +705,13 @@ export class ProfilePage extends LitElement {
 				requestAnimationFrame(() => this.drawCropPreview());
 			};
 			img.onerror = () => {
-				alert("Could not read that image file.");
+				alert("Kunde inte läsa bildfilen.");
 				this.isUploadingAvatar = false;
 			};
 			img.src = dataUrl;
 		};
 		reader.onerror = () => {
-			alert("Could not read that image file.");
+			alert("Kunde inte läsa bildfilen.");
 			this.isUploadingAvatar = false;
 		};
 		reader.readAsDataURL(file);
@@ -974,12 +819,12 @@ export class ProfilePage extends LitElement {
           <!-- Header -->
           <div class="flex items-center justify-between px-5 py-4 border-b border-base-200/70">
             <div>
-              <h3 class="text-ui-body font-semibold text-base-content leading-none">Adjust image</h3>
-              <p class="text-ui-body text-ui-muted mt-1">Drag to reposition · scroll to zoom</p>
+              <h3 class="text-ui-body font-semibold text-base-content leading-none">Justera bilden</h3>
+              <p class="text-ui-body text-ui-muted mt-1">Dra för att flytta · scrolla för att zooma</p>
             </div>
             <button
               class="btn btn-ghost btn-xs btn-circle opacity-50 hover:opacity-100"
-              aria-label="Close"
+              aria-label="Stäng"
               @click=${() => {
 								this.showAvatarCrop = false;
 							}}
@@ -1030,18 +875,18 @@ export class ProfilePage extends LitElement {
 								this.cropOffsetY = 0;
 								this.drawCropPreview();
 							}}
-            >Reset</button>
+            >Återställ</button>
             <div class="flex gap-2">
               <button
                 class="btn btn-ghost btn-sm"
                 @click=${() => {
 									this.showAvatarCrop = false;
 								}}
-              >Cancel</button>
+              >Avbryt</button>
               <button
                 class="btn btn-primary btn-sm px-5"
                 @click=${() => void this.applyAvatarCrop()}
-              >Apply</button>
+              >Använd</button>
             </div>
           </div>
         </div>
@@ -1069,7 +914,7 @@ export class ProfilePage extends LitElement {
 			const dataUrl = offscreen.toDataURL("image/jpeg", 0.85);
 			this.updateProfile({ avatarImage: dataUrl });
 		} catch {
-			alert("Could not process that image. Please try a smaller file.");
+			alert("Kunde inte bearbeta bilden. Prova en mindre fil.");
 		} finally {
 			this.showAvatarCrop = false;
 			this.pendingAvatarDataUrl = null;
