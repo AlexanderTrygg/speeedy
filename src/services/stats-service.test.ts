@@ -422,32 +422,32 @@ describe("getTodayWords", () => {
 
 describe("formatDuration", () => {
 	it("formats seconds only", () => {
-		expect(formatDuration(45000)).toBe("45s");
+		expect(formatDuration(45000)).toBe("45 s");
 	});
 
 	it("formats minutes and seconds", () => {
-		expect(formatDuration(90000)).toBe("1m 30s");
+		expect(formatDuration(90000)).toBe("1 min 30 s");
 	});
 
 	it("formats hours and minutes", () => {
-		expect(formatDuration(3660000)).toBe("1h 1m");
+		expect(formatDuration(3660000)).toBe("1 h 1 min");
 	});
 
 	it("formats zero duration", () => {
-		expect(formatDuration(0)).toBe("0s");
+		expect(formatDuration(0)).toBe("0 s");
 	});
 
 	it("formats exactly 1 minute", () => {
-		expect(formatDuration(60000)).toBe("1m 0s");
+		expect(formatDuration(60000)).toBe("1 min 0 s");
 	});
 
 	it("formats exactly 1 hour", () => {
-		expect(formatDuration(3600000)).toBe("1h 0m");
+		expect(formatDuration(3600000)).toBe("1 h 0 min");
 	});
 
 	it("formats large durations", () => {
 		// 2h 30m 15s = 9015000ms
-		expect(formatDuration(9015000)).toBe("2h 30m");
+		expect(formatDuration(9015000)).toBe("2 h 30 min");
 	});
 });
 
@@ -459,18 +459,18 @@ describe("formatNumber", () => {
 	});
 
 	it("formats thousands with K suffix", () => {
-		expect(formatNumber(1000)).toBe("1.0K");
-		expect(formatNumber(1500)).toBe("1.5K");
-		expect(formatNumber(999999)).toBe("1000.0K");
+		expect(formatNumber(1000)).toBe("1,0k");
+		expect(formatNumber(1500)).toBe("1,5k");
+		expect(formatNumber(999999)).toBe("1000,0k");
 	});
 
 	it("formats millions with M suffix", () => {
-		expect(formatNumber(1000000)).toBe("1.0M");
-		expect(formatNumber(2500000)).toBe("2.5M");
+		expect(formatNumber(1000000)).toBe("1,0 milj.");
+		expect(formatNumber(2500000)).toBe("2,5 milj.");
 	});
 
 	it("handles boundary between K and M", () => {
-		expect(formatNumber(999999)).toContain("K");
-		expect(formatNumber(1000000)).toContain("M");
+		expect(formatNumber(999999)).toContain("k");
+		expect(formatNumber(1000000)).toContain("milj.");
 	});
 });

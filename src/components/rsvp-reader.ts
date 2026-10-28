@@ -37,7 +37,9 @@ export class RsvpReader extends LitElement {
 	@state() private engine = new RSVPEngine();
 	@state() private playbackState: PlaybackState | null = null;
 	@state() private settings!: ReaderSettings;
-	@state() private showSettings = true;
+	/** Open beside the text on desktop; on a phone the sheet would cover it. */
+	@state() private showSettings =
+		typeof window === "undefined" || window.innerWidth >= 768;
 	@state() private showShortcuts = false;
 	@state() private sessionStartTime: number | null = null;
 	@state() private wordsAtSessionStart = 0;
@@ -140,7 +142,7 @@ export class RsvpReader extends LitElement {
 		if (wordCount === 0) return;
 
 		const saved = await saveDocument({
-			title: "Pasted Text",
+			title: "Inklistrad text",
 			text,
 			wordCount,
 			resumeWordIndex: 0,
@@ -155,7 +157,7 @@ export class RsvpReader extends LitElement {
 			wordCount: saved.wordCount,
 		});
 
-		showToast("Text loaded from clipboard ✓", "success");
+		showToast("Text hämtad från urklipp ✓", "success");
 		trackEvent("clipboard-paste-reader", { words: wordCount });
 	};
 
@@ -669,14 +671,14 @@ export class RsvpReader extends LitElement {
 							type="button"
 							class="btn btn-ghost btn-md btn-circle shrink-0 min-h-[44px] min-w-[44px] touch-manipulation"
 							@click=${this.handleBack}
-							title="Back to home (Esc)"
-							aria-label="Back to home"
+							title="Tillbaka (Esc)"
+							aria-label="Tillbaka"
 						>
 							<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
 							</svg>
 						</button>
-							<span class="text-xs md:text-sm text-base-content/70 truncate font-light tracking-wide">${this.docTitle || "No document"}</span>
+							<span class="text-xs md:text-sm text-base-content/70 truncate font-light tracking-wide">${this.docTitle || "Inget dokument"}</span>
 						</div>
 						<div class="flex items-center gap-1 md:gap-2 shrink-0 relative z-50">
 							<span class="text-xs md:text-sm text-base-content/55 font-mono hidden md:block mr-2">
@@ -700,8 +702,8 @@ export class RsvpReader extends LitElement {
 							@click=${() => {
 								this.showShortcuts = true;
 							}}
-							title="Keyboard shortcuts (?)"
-							aria-label="Show keyboard shortcuts"
+							title="Kortkommandon (?)"
+							aria-label="Visa kortkommandon"
 						>
 							<svg class="w-5 h-5 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -715,8 +717,8 @@ export class RsvpReader extends LitElement {
 							@click=${() => {
 								this.showSettings = !this.showSettings;
 							}}
-							title="Settings"
-							aria-label="${this.showSettings ? "Close settings" : "Open settings"}"
+							title="Inställningar"
+							aria-label="${this.showSettings ? "Stäng inställningar" : "Öppna inställningar"}"
 							aria-expanded="${this.showSettings}"
 						>
 							<svg class="w-5 h-5 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -811,8 +813,8 @@ export class RsvpReader extends LitElement {
 			<div class="hidden md:flex transition-all duration-300 ${this.showSettings ? "w-80 border-l border-base-200" : "w-0"} overflow-hidden shrink-0 bg-base-100 flex-col relative z-40">
 				<div class="w-80 flex flex-col h-full overflow-hidden">
 					<div class="px-5 py-4 border-b border-base-200 flex items-center justify-between shrink-0">
-						<span class="text-sm font-medium text-base-content/70 tracking-wide">Settings</span>
-						<button class="btn btn-ghost btn-sm btn-circle" aria-label="Close settings" @click=${() => {
+						<span class="text-sm font-medium text-base-content/70 tracking-wide">Inställningar</span>
+						<button class="btn btn-ghost btn-sm btn-circle" aria-label="Stäng inställningar" @click=${() => {
 							this.showSettings = false;
 						}}>
 							<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -847,10 +849,10 @@ export class RsvpReader extends LitElement {
 					aria-hidden="true"
 				></div>
 				<!-- Sheet -->
-				<div class="relative bg-base-100 rounded-t-2xl max-h-[80vh] flex flex-col shadow-2xl z-10 w-full" role="dialog" aria-label="Reader settings">
+				<div class="relative bg-base-100 rounded-t-2xl max-h-[80vh] flex flex-col shadow-2xl z-10 w-full" role="dialog" aria-label="Läsinställningar">
 					<div class="flex items-center justify-between px-5 py-4 border-b border-base-200 shrink-0">
-						<span class="text-sm font-medium text-base-content/70 tracking-wide">Settings</span>
-						<button class="btn btn-ghost btn-sm btn-circle" aria-label="Close settings" @click=${() => {
+						<span class="text-sm font-medium text-base-content/70 tracking-wide">Inställningar</span>
+						<button class="btn btn-ghost btn-sm btn-circle" aria-label="Stäng inställningar" @click=${() => {
 							this.showSettings = false;
 						}}>
 							<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -878,9 +880,9 @@ export class RsvpReader extends LitElement {
 	private renderEmptyState() {
 		return html`
       <div class="text-center">
-        <p class="text-base-content/65 text-lg font-light mb-4">No document loaded</p>
+        <p class="text-base-content/65 text-lg font-light mb-4">Inget dokument öppet</p>
         <button class="btn btn-primary btn-sm" @click=${() => navigate("app")}>
-          Load a document
+          Välj ett dokument
         </button>
       </div>
     `;
@@ -906,7 +908,7 @@ export class RsvpReader extends LitElement {
         style="font-size: ${this.settings.fontSize * 0.45}px; font-family: '${this.settings.fontFamily}', monospace; line-height: 1.8; letter-spacing: 0.02em; word-spacing: 0.1em; max-width: 720px; margin: 0 auto; scroll-behavior: smooth;"
       >
         <p class="text-xs text-base-content/40 mb-3 text-center font-mono">
-          Paused — click any word to jump to it, then press play
+          Pausad — tryck på ett ord för att hoppa dit och sedan på spela
         </p>
         <p class="text-base-content/80 text-start" dir="auto">
           ${displayTokens.map(
@@ -974,7 +976,20 @@ export class RsvpReader extends LitElement {
 		const lineHeight = isDyslexia ? "1.5" : "1";
 
 		const fontWeight = this.settings.fontWeight ?? 400;
-		const fontStyle = `font-size: ${this.settings.fontSize}px; font-family: ${fontFamily}; letter-spacing: ${letterSpacing}em; word-spacing: ${wordSpacing}; line-height: ${lineHeight}; font-weight: ${fontWeight}`;
+		const areaWidth =
+			window.innerWidth -
+			(this.showSettings && window.innerWidth >= 768 ? 320 : 0);
+		const fittedSize = displayOrp
+			? fitFontSize(
+					this.settings.fontSize,
+					[...displayOrp.before].length,
+					[...displayOrp.after].length,
+					areaWidth,
+					this.settings.pivotOffset ?? 0,
+					letterSpacing,
+				)
+			: this.settings.fontSize;
+		const fontStyle = `font-size: ${fittedSize}px; font-family: ${fontFamily}; letter-spacing: ${letterSpacing}em; word-spacing: ${wordSpacing}; line-height: ${lineHeight}; font-weight: ${fontWeight}`;
 		const peripheralStyle = `font-size: ${this.settings.fontSize * 0.38}px; font-family: ${fontFamily}; letter-spacing: ${letterSpacing}em; word-spacing: ${wordSpacing}; font-weight: ${fontWeight}`;
 
 		const count = this.settings.peripheralContextCount ?? 1;
@@ -1131,7 +1146,7 @@ export class RsvpReader extends LitElement {
         id="ticker-container"
         class="w-full h-full flex items-center overflow-hidden relative"
         aria-live="polite"
-        aria-label="Reading: ${s.currentTokens.map((t) => t.text).join(" ")}"
+        aria-label="Läser: ${s.currentTokens.map((t) => t.text).join(" ")}"
       >
         <!-- Right fade mask -->
         <div class="absolute inset-y-0 right-0 w-6 md:w-20 z-10 pointer-events-none"
@@ -1272,9 +1287,9 @@ export class RsvpReader extends LitElement {
 		const h = Math.floor(seconds / 3600);
 		const m = Math.floor((seconds % 3600) / 60);
 		const sec = seconds % 60;
-		if (h > 0) return `${h}h ${m}m`;
-		if (m > 0) return sec > 0 ? `${m}m ${sec}s` : `${m}m`;
-		return `${sec}s`;
+		if (h > 0) return `${h} h ${m} min`;
+		if (m > 0) return sec > 0 ? `${m} min ${sec} s` : `${m} min`;
+		return `${sec} s`;
 	}
 
 	private renderControls(
@@ -1284,7 +1299,7 @@ export class RsvpReader extends LitElement {
 		remainingLabel: string,
 	) {
 		return html`
-      <div class="flex flex-wrap items-center justify-center gap-3 md:gap-4 max-w-2xl mx-auto w-full" role="toolbar" aria-label="Playback controls">
+      <div class="flex flex-wrap items-center justify-center gap-3 md:gap-4 max-w-2xl mx-auto w-full" role="toolbar" aria-label="Uppspelning">
 
         <!-- Rewind N words -->
         <button
@@ -1293,8 +1308,8 @@ export class RsvpReader extends LitElement {
           @click=${() => {
 						this.engine.rewindSentence();
 					}}
-          title="Back one sentence (↑ or swipe right)"
-          aria-label="Back one sentence"
+          title="Föregående mening (↑ eller svep åt höger)"
+          aria-label="Föregående mening"
         >
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1307,8 +1322,8 @@ export class RsvpReader extends LitElement {
           type="button"
           class="btn btn-primary btn-circle btn-lg min-h-[52px] min-w-[52px] touch-manipulation"
           @click=${this.togglePlay}
-          title="Play/Pause (Space)"
-          aria-label="${playing ? "Pause" : "Play"}"
+          title="Spela/pausa (mellanslag)"
+          aria-label="${playing ? "Pausa" : "Spela"}"
           aria-pressed="${playing}"
         >
           ${
@@ -1330,8 +1345,8 @@ export class RsvpReader extends LitElement {
           @click=${() => {
 						this.engine.forwardSentence();
 					}}
-          title="Next sentence (↓ or swipe left)"
-          aria-label="Next sentence"
+          title="Nästa mening (↓ eller svep åt vänster)"
+          aria-label="Nästa mening"
         >
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1346,8 +1361,8 @@ export class RsvpReader extends LitElement {
           @click=${() => {
 						this.engine.stop();
 					}}
-          title="Restart (R)"
-          aria-label="Restart from beginning"
+          title="Börja om (R)"
+          aria-label="Börja om från början"
         >
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1369,7 +1384,7 @@ export class RsvpReader extends LitElement {
           >−</button>
           <div class="flex flex-col items-center w-14 md:w-16">
             <span class="font-mono text-sm md:text-base font-medium leading-none">${wpm}</span>
-            <span class="text-xs text-base-content/60 leading-none mt-0.5">WPM</span>
+            <span class="text-xs text-base-content/60 leading-none mt-0.5">ord/min</span>
           </div>
           <button
             type="button"
@@ -1382,8 +1397,8 @@ export class RsvpReader extends LitElement {
         ${
 					remainingSeconds > 0 && remainingLabel
 						? html`
-          <span class="text-sm text-base-content/55 font-mono" title="${remainingSeconds} seconds">
-            ${remainingLabel} left
+          <span class="text-sm text-base-content/55 font-mono" title="${remainingSeconds} sekunder">
+            ${remainingLabel} kvar
           </span>
         `
 						: ""
@@ -1395,15 +1410,15 @@ export class RsvpReader extends LitElement {
 
 	private renderShortcutsModal() {
 		const shortcuts = [
-			["Space", "Play / Pause"],
-			["F", "Toggle focus mode (immersive while playing)"],
-			["Tap", "Play / Pause — with focus mode on, shows controls again"],
-			["←  →", "Speed −/+ 25 WPM"],
-			["↑  ↓", "Back / Forward one sentence"],
-			["Swipe → ←", "Back / Forward one sentence"],
-			["R", "Restart from beginning"],
-			["Esc", "Back to home"],
-			["?", "Toggle this overlay"],
+			["Mellanslag", "Spela / pausa"],
+			["F", "Fokusläge av/på"],
+			["Tryck", "Spela / pausa — i fokusläge visas kontrollerna igen"],
+			["←  →", "Tempo −/+ 25 ord/min"],
+			["↑  ↓", "Föregående / nästa mening"],
+			["Svep → ←", "Föregående / nästa mening"],
+			["R", "Börja om från början"],
+			["Esc", "Tillbaka"],
+			["?", "Visa/dölj den här rutan"],
 		];
 		return html`
       <div
@@ -1417,12 +1432,12 @@ export class RsvpReader extends LitElement {
           class="card bg-base-100 w-full max-w-sm shadow-xl"
           @click=${(e: Event) => e.stopPropagation()}
           role="dialog"
-          aria-label="Keyboard shortcuts"
+          aria-label="Kortkommandon"
         >
           <div class="card-body">
             <div class="flex items-center justify-between mb-2">
-              <h3 class="font-medium text-base-content">Keyboard Shortcuts</h3>
-              <button class="btn btn-ghost btn-xs btn-circle" aria-label="Close shortcuts" @click=${() => {
+              <h3 class="font-medium text-base-content">Kortkommandon</h3>
+              <button class="btn btn-ghost btn-xs btn-circle" aria-label="Stäng kortkommandon" @click=${() => {
 								this.showShortcuts = false;
 							}}>
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -1445,6 +1460,30 @@ export class RsvpReader extends LitElement {
       </div>
     `;
 	}
+}
+
+/**
+ * Shrinks the font so a long word ("användbarhetsutvärdering") fits on both
+ * sides of the pivot instead of running off a phone screen. Assumes a
+ * monospace face (~0.6em per character) and the pivot offset as % of half-width.
+ */
+export function fitFontSize(
+	fontSize: number,
+	charsBefore: number,
+	charsAfter: number,
+	widthPx: number,
+	pivotOffsetPct: number,
+	letterSpacingEm: number,
+): number {
+	const margin = 12;
+	const pivotX = widthPx / 2 + (pivotOffsetPct / 100) * (widthPx / 2);
+	const charEm = 0.6 + letterSpacingEm;
+	const fitRight = (widthPx - pivotX - margin) / ((charsAfter + 0.5) * charEm);
+	const fitLeft = (pivotX - margin) / ((charsBefore + 0.5) * charEm);
+	return Math.max(
+		14,
+		Math.min(fontSize, Math.floor(Math.min(fitRight, fitLeft))),
+	);
 }
 
 declare global {

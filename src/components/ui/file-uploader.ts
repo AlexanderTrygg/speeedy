@@ -1,5 +1,6 @@
 import { html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { type BrainBundle, isBrainBundle } from "../../models/brain.js";
 import type { ParsedDocument } from "../../models/types.js";
 import { parseFile } from "../../services/text-parser.js";
 
@@ -20,6 +21,7 @@ import { parseFile } from "../../services/text-parser.js";
  *   file-parsed  → CustomEvent<{ doc: ParsedDocument }>
  *   file-error   → CustomEvent<{ message: string }>
  *   file-loading → CustomEvent<{ loading: boolean }>
+ *   brain-imported → CustomEvent<{ bundle: BrainBundle }> (a hjarnan.json export)
  */
 @customElement("speeedy-file-uploader")
 export class SpeeedyFileUploader extends LitElement {
@@ -28,10 +30,11 @@ export class SpeeedyFileUploader extends LitElement {
 	}
 
 	/** Main label shown in the drop zone */
-	@property({ type: String }) label = "Drop a file, or click to browse";
+	@property({ type: String }) label =
+		"Släpp en fil här eller tryck för att välja";
 	/** Hint text shown below the label */
 	@property({ type: String }) hint =
-		"PDF · DOCX · TXT · EPUB · and more · up to 50 MB";
+		"PDF · DOCX · TXT · EPUB · med flera · upp till 50 MB";
 	/** Max file size in bytes (default 50 MB) */
 	@property({ type: Number, attribute: "max-bytes" }) maxBytes =
 		50 * 1024 * 1024;
@@ -47,7 +50,7 @@ export class SpeeedyFileUploader extends LitElement {
 
 	/** All accepted MIME types and extensions */
 	private static readonly ACCEPT =
-		".pdf,.docx,.doc,.txt,.md,.epub,.zip,.rtf,.html,.htm,.odt,.csv";
+		".pdf,.docx,.doc,.txt,.md,.epub,.zip,.rtf,.html,.htm,.odt,.csv,.json";
 
 	private get inputId() {
 		return `speeedy-file-input-${this._uid}`;
@@ -61,7 +64,7 @@ export class SpeeedyFileUploader extends LitElement {
 		if (file.size > this.maxBytes) {
 			const mb = (file.size / 1024 / 1024).toFixed(1);
 			const limit = (this.maxBytes / 1024 / 1024).toFixed(0);
-			const msg = `That file is ${mb} MB — just over the ${limit} MB limit. Try a smaller file or paste the text directly.`;
+			const msg = `Filen är ${mb} MB, över gränsen på ${limit} MB. Prova en mindre fil eller klistra in texten.`;
 			this._emitError(msg);
 			return;
 		}
@@ -70,6 +73,10 @@ export class SpeeedyFileUploader extends LitElement {
 		this._emitLoading(true);
 
 		try {
+			if (file.name.toLowerCase().endsWith(".json")) {
+				await this.importBrain(file);
+				return;
+			}
 			const doc = await parseFile(file);
 			this.dispatchEvent(
 				new CustomEvent<{ doc: ParsedDocument }>("file-parsed", {
@@ -82,7 +89,7 @@ export class SpeeedyFileUploader extends LitElement {
 			const msg =
 				e instanceof Error
 					? e.message
-					: "We couldn't read that file. Try a different format or paste the text instead.";
+					: "Det gick inte att läsa filen. Prova ett annat format eller klistra in texten.";
 			this._emitError(msg);
 		} finally {
 			this.loading = false;
@@ -93,6 +100,28 @@ export class SpeeedyFileUploader extends LitElement {
 			);
 			if (input) input.value = "";
 		}
+	}
+
+	/** The vault export from scripts/hjarnan.ts — a library, not one document. */
+	private async importBrain(file: File): Promise<void> {
+		let data: unknown;
+		try {
+			data = JSON.parse(await file.text());
+		} catch {
+			throw new Error("JSON-filen gick inte att läsa.");
+		}
+		if (!isBrainBundle(data)) {
+			throw new Error(
+				"Det här är ingen export från hjärnan. Kör npm run hjarnan på datorn och välj hjarnan.json.",
+			);
+		}
+		this.dispatchEvent(
+			new CustomEvent<{ bundle: BrainBundle }>("brain-imported", {
+				detail: { bundle: data },
+				bubbles: true,
+				composed: true,
+			}),
+		);
 	}
 
 	private _emitError(message: string) {
@@ -197,7 +226,7 @@ export class SpeeedyFileUploader extends LitElement {
 		return html`
       <div class="flex flex-col items-center gap-3">
         <span class="loading loading-spinner loading-md text-primary"></span>
-        <p class="text-xs text-ui-muted-subtle">Extracting text…</p>
+        <p class="text-xs text-ui-muted-subtle">Hämtar text…</p>
       </div>
     `;
 	}

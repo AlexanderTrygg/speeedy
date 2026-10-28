@@ -1,6 +1,7 @@
 import type JSZip from "jszip";
 import type { ParsedDocument } from "../models/types.js";
 import { countWords, htmlToPlainText } from "../utils/text-utils.js";
+import { cleanExtractedText } from "./text-cleanup.js";
 
 type JSZipStatic = typeof JSZip;
 
@@ -13,7 +14,7 @@ async function loadJSZip(): Promise<JSZipStatic> {
 
 	if (typeof JSZip?.loadAsync !== "function") {
 		throw new Error(
-			"Could not load the file parser. Please refresh the page and try again.",
+			"Kunde inte ladda filläsaren. Ladda om sidan och försök igen.",
 		);
 	}
 
@@ -94,7 +95,7 @@ export async function parseFile(file: File): Promise<ParsedDocument> {
 		} catch (e) {
 			if (ext === "zip")
 				throw new Error(
-					"Unsupported ZIP content. Only EPUB books in ZIP format are supported.",
+					"ZIP-filen stöds inte. Bara EPUB-böcker i ZIP-format går att läsa.",
 				);
 			throw e;
 		}
@@ -114,7 +115,7 @@ export async function parseFile(file: File): Promise<ParsedDocument> {
 	}
 
 	throw new Error(
-		`Unsupported file type: .${ext ?? "unknown"}. Supported formats: PDF, DOCX, DOC, TXT, MD, EPUB, RTF, HTML, ODT, CSV.`,
+		`Filtypen .${ext ?? "okänd"} stöds inte. Det här går att läsa: PDF, DOCX, DOC, TXT, MD, EPUB, RTF, HTML, ODT, CSV och hjärnans exportfil (.json).`,
 	);
 }
 
@@ -178,7 +179,7 @@ async function parsePdf(file: File): Promise<ParsedDocument> {
 		pageParts.push(lines.join("\n"));
 	}
 
-	const text = cleanText(pageParts.join("\n\n"));
+	const text = cleanExtractedText(pageParts);
 	return {
 		title: file.name.replace(/\.pdf$/i, ""),
 		text,
@@ -226,7 +227,7 @@ async function parseDocLegacy(file: File): Promise<ParsedDocument> {
 	const text = cleanText(raw);
 	if (text.trim().length < 50) {
 		throw new Error(
-			"Could not extract text from this .doc file. Try saving it as .docx or .txt first.",
+			"Kunde inte hämta text ur .doc-filen. Spara den som .docx eller .txt först.",
 		);
 	}
 	return {
@@ -247,7 +248,7 @@ async function parseRtf(file: File): Promise<ParsedDocument> {
 	text = cleanText(text);
 	if (text.trim().length < 10) {
 		throw new Error(
-			"Could not extract text from this RTF file. Try saving it as .txt or .docx.",
+			"Kunde inte hämta text ur RTF-filen. Spara den som .txt eller .docx.",
 		);
 	}
 	return {
@@ -314,11 +315,11 @@ async function parseOdt(file: File): Promise<ParsedDocument> {
 	try {
 		zip = await JSZip.loadAsync(await file.arrayBuffer());
 	} catch {
-		throw new Error("Could not open ODT file as a valid archive.");
+		throw new Error("Kunde inte öppna ODT-filen.");
 	}
 	const contentFile = zip.file("content.xml");
 	if (!contentFile) {
-		throw new Error("Invalid ODT: content.xml not found.");
+		throw new Error("Ogiltig ODT-fil: content.xml saknas.");
 	}
 	const xmlStr = await contentFile.async("string");
 	const text = cleanText(htmlToPlainText(xmlStr));
@@ -335,12 +336,12 @@ async function parseEpub(file: File): Promise<ParsedDocument> {
 	try {
 		zip = await JSZip.loadAsync(await file.arrayBuffer());
 	} catch {
-		throw new Error("Could not open file as a valid archive.");
+		throw new Error("Kunde inte öppna filen.");
 	}
 
 	const opfFile = await findOpfFile(zip);
 	if (!opfFile)
-		throw new Error("Invalid EPUB: No content manifest (OPF) found.");
+		throw new Error("Ogiltig EPUB: innehållsförteckningen (OPF) saknas.");
 
 	const opfContent = await opfFile.async("string");
 	const parser = new DOMParser();
@@ -367,7 +368,9 @@ async function parseEpub(file: File): Promise<ParsedDocument> {
 	}
 
 	if (parts.length === 0) {
-		throw new Error("EPUB appears to be empty or encrypted (DRM protected).");
+		throw new Error(
+			"EPUB-filen verkar vara tom eller kopieringsskyddad (DRM).",
+		);
 	}
 
 	const text = cleanText(parts.join("\n\n"));

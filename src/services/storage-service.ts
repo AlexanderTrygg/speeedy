@@ -1,4 +1,5 @@
 import { type IDBPDatabase, openDB } from "idb";
+import { type BrainBundle, isBrainBundle } from "../models/brain.js";
 import type { SavedDocument, UserProfile } from "../models/types.js";
 import { contentHash as digest, newId } from "../utils/ids.js";
 import { DEFAULT_SETTINGS, getDefaultFontSize } from "./defaults.js";
@@ -7,6 +8,8 @@ const DB_NAME = "speeedy-db";
 const DB_VERSION = 2;
 const PROFILE_STORE = "profile";
 const PROFILE_KEY = "user-profile";
+/** The vault export lives beside the profile; one record, replaced on each import. */
+const BRAIN_KEY = "hjarnan";
 const DOCS_STORE = "documents";
 
 const MAX_SAVED_DOCS = 20;
@@ -93,7 +96,7 @@ export async function importProfile(encoded: string): Promise<UserProfile> {
 	const decompressed = await decompressData(bytes);
 	const json = new TextDecoder().decode(decompressed);
 	const raw = JSON.parse(json);
-	if (!isValidProfile(raw)) throw new Error("Invalid profile data.");
+	if (!isValidProfile(raw)) throw new Error("Ogiltig profildata.");
 	const defaults = createDefaultProfile();
 	const merged: UserProfile = {
 		...defaults,
@@ -238,5 +241,21 @@ async function pruneDocuments(db: IDBPDatabase): Promise<void> {
 		for (const doc of toDelete) {
 			await db.delete(DOCS_STORE, doc.id);
 		}
+	}
+}
+
+export async function saveBrainBundle(bundle: BrainBundle): Promise<void> {
+	const db = await getDb();
+	await db.put(PROFILE_STORE, bundle, BRAIN_KEY);
+}
+
+export async function loadBrainBundle(): Promise<BrainBundle | null> {
+	try {
+		const db = await getDb();
+		const raw = await db.get(PROFILE_STORE, BRAIN_KEY);
+		return isBrainBundle(raw) ? raw : null;
+	} catch (err) {
+		console.error("[speeedy] Failed to load brain bundle:", err);
+		return null;
 	}
 }

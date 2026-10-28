@@ -35,3 +35,6 @@ test-results/
 
 # Kilo AI tooling
 .kilo/
+
+# Export from the Obsidian vault (course literature, never pushed)
+hjarnan/

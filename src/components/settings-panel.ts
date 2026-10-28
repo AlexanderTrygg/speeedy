@@ -13,42 +13,38 @@ import "./ui/segmented.js";
 import "./ui/toggle.js";
 
 const TOOLTIPS = {
-	sentencePause:
-		"Extra duration after periods, question marks, and exclamation points.",
-	paragraphPause: "Extra delay when a new paragraph begins.",
-	commaPause: "Extra duration after commas and semicolons.",
+	sentencePause: "Extra tid efter punkt, frågetecken och utropstecken.",
+	paragraphPause: "Extra paus när ett nytt stycke börjar.",
+	commaPause: "Extra tid efter kommatecken och semikolon.",
 	pauseFloor:
-		"Keeps a minimum break at commas, sentence ends and paragraphs, so sentences don't blur together at high WPM.",
-	letterSpacing: "Adjust the horizontal space between characters.",
+		"Håller en minsta paus vid komma, meningsslut och stycken, så att meningarna inte flyter ihop i högt tempo.",
+	letterSpacing: "Avståndet mellan bokstäverna.",
 	pivotOffset:
-		"Nudges the focus point left or right if you prefer eye-fixation off-center.",
+		"Flyttar fokuspunkten åt vänster eller höger om du vill fästa blicken utanför mitten.",
 	speedRamp:
-		"Slowly accelerates the speed at the start of a session so your brain can adjust.",
-	bionicMode: "Bold the first few letters of each word to guide the eye.",
+		"Ökar tempot gradvis i början av passet så att hjärnan hinner vänja sig.",
+	bionicMode:
+		"Fetmarkerar de första bokstäverna i varje ord för att leda blicken.",
 	smartSpeed:
-		"Varies the duration of each word based on its character length (longer words dwell longer).",
+		"Anpassar tiden per ord efter längden: korta, vanliga ord går fortare och långa sammansättningar får mer tid.",
 	peripheralContext:
-		"Shows a ghost of the previous and next words to help stay oriented.",
+		"Visar föregående och nästa ord svagt, så att du håller tråden.",
 	orpGuides:
-		"Small markers above and below the focus point to help lock your gaze.",
-	colorizeQuotes:
-		"Apply a distinct color to words inside double quotes (dialogue).",
-	colorizeParens:
-		"Apply a distinct color to words inside parentheses or square brackets (asides).",
+		"Små markeringar ovanför och under fokuspunkten som hjälper blicken att stå still.",
+	colorizeQuotes: "Färgar ord inom citattecken (dialog).",
+	colorizeParens: "Färgar ord inom parentes eller hakparentes (inskott).",
 	irlenMode:
-		"Color overlays to reduce visual stress and improve focus (Irlen Syndrome).",
+		"Färgtoning som minskar visuell stress och hjälper fokus (Irlens syndrom).",
 	dyslexiaMode:
-		"Uses OpenDyslexic, a font designed to improve readability for neurodivergent readers.",
+		"Använder OpenDyslexic, ett typsnitt gjort för att vara lättläst vid dyslexi.",
 	contextPauseOnClose:
-		"Slight extra pause after closing ) or ] to help process the phrase.",
-	commaAsPause:
-		"Treat commas with the same weighted pause as full sentence ends.",
-	countdown: "Show a 3-2-1 timer before the text starts flowing.",
-	clickSound:
-		"Soft procedural clicks synchronized with word flashes for rhythmic focus.",
+		"Lite extra paus efter ) eller ] så att inskottet hinner landa.",
+	commaAsPause: "Ger kommatecken lika lång paus som meningsslut.",
+	countdown: "Räknar ner 3-2-1 innan texten börjar.",
+	clickSound: "Mjuka klick i takt med orden, för rytm och fokus.",
 	fontWeight:
-		"Heavier weight makes text easier to track. Many dyslexic readers prefer medium-to-bold weights.",
-	irlenOpacity: "Adjust how strong the color tint is.",
+		"Tjockare text är lättare att följa. Många med dyslexi föredrar halvfet till fet.",
+	irlenOpacity: "Hur stark färgtoningen är.",
 };
 
 const FONTS: FontFamily[] = [
@@ -83,8 +79,8 @@ export class SettingsPanel extends LitElement {
 		const effectiveTheme = theme === "system" ? getResolvedTheme(theme) : theme;
 		const themeOptions: ("light" | "dark")[] = ["light", "dark"];
 		const themeLabels: Record<"light" | "dark", string> = {
-			light: "☀️ Light",
-			dark: "🌙 Dark",
+			light: "☀️ Ljust",
+			dark: "🌙 Mörkt",
 		};
 
 		return html`
@@ -92,9 +88,9 @@ export class SettingsPanel extends LitElement {
 
         <!-- Theme -->
         <section class="pb-6">
-          <span class="text-xs uppercase tracking-widest text-ui-muted block mb-2">Theme</span>
+          <span class="text-xs uppercase tracking-widest text-ui-muted block mb-2">Tema</span>
           <speeedy-segmented
-            group-label="Theme"
+            group-label="Tema"
             .options=${themeOptions.map((t) => ({ value: t, label: themeLabels[t] }))}
             .value=${effectiveTheme}
             @change=${(e: CustomEvent) => {
@@ -107,10 +103,10 @@ export class SettingsPanel extends LitElement {
         <!-- Speed -->
         <section class="pb-6">
           <speeedy-range
-            label="Speed"
+            label="Hastighet"
             min="50" max="1600" step="25"
             .value=${s.wpm}
-            unit=" WPM"
+            unit=" ord/min"
             min-label="50"
             max-label="1600"
             @change=${(e: CustomEvent) => this.emit({ wpm: e.detail.value })}
@@ -120,7 +116,7 @@ export class SettingsPanel extends LitElement {
         <!-- Font Size -->
         <section class="pb-6">
           <speeedy-range
-            label="Font size"
+            label="Textstorlek"
             min="16" max="256" step="4"
             .value=${s.fontSize}
             unit="px"
@@ -131,7 +127,7 @@ export class SettingsPanel extends LitElement {
         <!-- Letter Spacing -->
         <section class="pb-6">
           <speeedy-range
-            label="Letter spacing"
+            label="Teckenavstånd"
             min="0" max="0.5" step="0.01"
             .value=${s.letterSpacing}
             .format=${(v: number) => `${v.toFixed(2)}em`}
@@ -145,10 +141,10 @@ export class SettingsPanel extends LitElement {
         <!-- Pivot Position -->
         <section class="pb-6">
           <speeedy-range
-            label="Pivot offset"
+            label="Fokuspunktens läge"
             min="-30" max="30" step="1"
             .value=${s.pivotOffset ?? 0}
-            .format=${(v: number) => (v === 0 ? "Centre" : v > 0 ? `+${v}%` : `${v}%`)}
+            .format=${(v: number) => (v === 0 ? "Mitten" : v > 0 ? `+${v}%` : `${v}%`)}
             min-label="-30%"
             max-label="+30%"
             tip=${TOOLTIPS.pivotOffset}
@@ -158,12 +154,12 @@ export class SettingsPanel extends LitElement {
 
         <!-- Words per flash -->
         <section class="pb-6">
-          <span class="text-xs uppercase tracking-widest text-ui-muted block mb-2">Words per flash</span>
+          <span class="text-xs uppercase tracking-widest text-ui-muted block mb-2">Ord per visning</span>
           <speeedy-segmented
-            group-label="Words per flash"
-            .options=${[1, 2, 3, 4, 5].map((n) => ({ value: n, label: n === 1 ? "1 word" : `${n} words` }))}
+            group-label="Ord per visning"
+            .options=${[1, 2, 3, 4, 5].map((n) => ({ value: n, label: n === 1 ? "1 ord" : `${n} ord` }))}
             .value=${s.chunkSize}
-            tip="Number of words displayed in each flash. More words = faster reading but may reduce comprehension."
+            tip="Hur många ord som visas åt gången. Fler ord går fortare men kan sänka förståelsen."
             @change=${(e: CustomEvent) => this.emit({ chunkSize: e.detail.value })}
           ></speeedy-segmented>
         </section>
@@ -171,11 +167,11 @@ export class SettingsPanel extends LitElement {
         <!-- Advanced timing -->
         <section class="border-t border-base-200 pt-6 pb-2" aria-labelledby="settings-advanced-heading">
           <h2 id="settings-advanced-heading" class="text-xs uppercase tracking-widest text-ui-muted font-medium mb-4">
-            Advanced timing
+            Avancerad timing
           </h2>
           <div class="flex flex-col gap-5">
             <speeedy-range
-              label="Sentence pause"
+              label="Paus vid meningsslut"
               min="1" max="10" step="0.5"
               .value=${s.sentencePauseMultiplier}
               unit="×"
@@ -185,7 +181,7 @@ export class SettingsPanel extends LitElement {
               @change=${(e: CustomEvent) => this.emit({ sentencePauseMultiplier: e.detail.value })}
             ></speeedy-range>
             <speeedy-range
-              label="Comma pause"
+              label="Paus vid komma"
               min="1" max="10" step="0.5"
               .value=${s.commaPauseMultiplier ?? s.sentencePauseMultiplier}
               unit="×"
@@ -195,15 +191,15 @@ export class SettingsPanel extends LitElement {
               @change=${(e: CustomEvent) => this.emit({ commaPauseMultiplier: e.detail.value })}
             ></speeedy-range>
             <speeedy-toggle
-              label="Minimum pause at speed"
-              hint="Pauses don't shrink away at high WPM"
+              label="Minsta paus i högt tempo"
+              hint="Pauserna försvinner inte när tempot ökar"
               ?checked=${s.pauseFloor ?? true}
               tip=${TOOLTIPS.pauseFloor}
               @change=${(e: CustomEvent) => this.emit({ pauseFloor: e.detail.value })}
             ></speeedy-toggle>
             <speeedy-range
-              label="Paragraph pause"
-              hint="Extra dwell at paragraph start"
+              label="Paus vid nytt stycke"
+              hint="Extra tid när ett stycke börjar"
               min="1" max="3" step="0.1"
               .value=${s.paragraphPauseMultiplier ?? 1}
               .format=${(v: number) => `${v.toFixed(1)}×`}
@@ -214,8 +210,8 @@ export class SettingsPanel extends LitElement {
             ></speeedy-range>
             <div class="flex flex-col gap-3">
               <speeedy-toggle
-                label="Speed ramp"
-                hint="Accelerate gradually to target"
+                label="Uppvärmning"
+                hint="Ökar gradvis till måltempot"
                 ?checked=${s.speedRampEnabled}
                 tip=${TOOLTIPS.speedRamp}
                 @change=${(e: CustomEvent) => this.emit({ speedRampEnabled: e.detail.value })}
@@ -224,10 +220,10 @@ export class SettingsPanel extends LitElement {
 								s.speedRampEnabled
 									? html`
                 <speeedy-range
-                  label="Target WPM"
+                  label="Måltempo"
                   min="50" max="1600" step="25"
                   .value=${s.speedRampTarget}
-                  unit=" WPM"
+                  unit=" ord/min"
                   color="secondary"
                   min-label="50"
                   max-label="1600"
@@ -243,13 +239,13 @@ export class SettingsPanel extends LitElement {
         <!-- Accessibility & visuals -->
         <section class="border-t border-base-200 pt-6 pb-2" aria-labelledby="settings-a11y-heading">
           <h2 id="settings-a11y-heading" class="text-xs uppercase tracking-widest text-ui-muted font-medium mb-4">
-            Accessibility & visuals
+            Tillgänglighet och utseende
           </h2>
           <div class="flex flex-col gap-6">
             <div>
               <div class="flex items-center justify-between gap-2 mb-2">
-                <span class="text-xs uppercase tracking-widest text-ui-muted">Reading font</span>
-                ${s.dyslexiaMode ? html`<span class="text-[10px] bg-warning text-warning-content px-1.5 py-0.5 rounded font-medium uppercase shrink-0">Dyslexic active</span>` : ""}
+                <span class="text-xs uppercase tracking-widest text-ui-muted">Typsnitt</span>
+                ${s.dyslexiaMode ? html`<span class="text-[10px] bg-warning text-warning-content px-1.5 py-0.5 rounded font-medium uppercase shrink-0">Dyslexiläge på</span>` : ""}
               </div>
               <div class="rounded-xl border border-base-200 bg-base-200/20 p-1.5 flex flex-col gap-0.5 ${s.dyslexiaMode ? "opacity-40 pointer-events-none grayscale" : ""}">
                 ${FONTS.map(
@@ -267,40 +263,40 @@ export class SettingsPanel extends LitElement {
               </div>
             </div>
             <speeedy-range
-              label="Font weight"
+              label="Textvikt"
               min="300" max="800" step="100"
               .value=${s.fontWeight ?? 400}
               .format=${(v: number) => {
 								const labels: Record<number, string> = {
-									300: "Light",
-									400: "Regular",
-									500: "Medium",
-									600: "Semi-bold",
-									700: "Bold",
-									800: "Extra-bold",
+									300: "Tunn",
+									400: "Normal",
+									500: "Medel",
+									600: "Halvfet",
+									700: "Fet",
+									800: "Extrafet",
 								};
 								return labels[v] ?? String(v);
 							}}
-              min-label="Light"
-              max-label="Extra-bold"
+              min-label="Tunn"
+              max-label="Extrafet"
               tip=${TOOLTIPS.fontWeight}
               @change=${(e: CustomEvent) => this.emit({ fontWeight: e.detail.value as FontWeight })}
             ></speeedy-range>
             <div class="flex flex-col gap-3">
-              <span class="text-xs uppercase tracking-widest text-ui-muted">Visual highlights</span>
+              <span class="text-xs uppercase tracking-widest text-ui-muted">Färgmarkeringar</span>
               <div class="rounded-xl border border-base-200/80 bg-base-100/40 p-3 flex flex-col gap-3">
                 <div class="flex items-center justify-between gap-3">
-                  <span class="text-sm text-base-content">Pivot (ORP)</span>
+                  <span class="text-sm text-base-content">Fokusbokstav (ORP)</span>
                   <input
                     type="color" .value=${s.highlightColor}
-                    aria-label="ORP pivot highlight color"
+                    aria-label="Färg på fokusbokstaven"
                     @input=${(e: InputEvent) => this.emit({ highlightColor: (e.target as HTMLInputElement).value })}
                     class="w-9 h-9 rounded-lg shrink-0 cursor-pointer border border-base-300 bg-transparent"
                   />
                 </div>
                 <div class="flex flex-col gap-2">
                   <speeedy-toggle
-                    label="Colorize dialogue"
+                    label="Färga dialog"
                     ?checked=${s.colorizeQuotes ?? false}
                     tip=${TOOLTIPS.colorizeQuotes}
                     @change=${(e: CustomEvent) => this.emit({ colorizeQuotes: e.detail.value })}
@@ -309,10 +305,10 @@ export class SettingsPanel extends LitElement {
 										s.colorizeQuotes
 											? html`
                     <div class="flex items-center justify-between gap-3 pl-0.5">
-                      <span class="text-xs text-ui-muted-subtle">Quote color</span>
+                      <span class="text-xs text-ui-muted-subtle">Färg på citat</span>
                       <input
                         type="color" .value=${s.quoteHighlightColor}
-                        aria-label="Dialogue quote highlight color"
+                        aria-label="Färg på citat"
                         @input=${(e: InputEvent) => this.emit({ quoteHighlightColor: (e.target as HTMLInputElement).value })}
                         class="w-9 h-9 rounded-lg shrink-0 cursor-pointer border border-base-300 bg-transparent"
                       />
@@ -323,7 +319,7 @@ export class SettingsPanel extends LitElement {
                 </div>
                 <div class="flex flex-col gap-2">
                   <speeedy-toggle
-                    label="Colorize asides ( ) [ ]"
+                    label="Färga inskott ( ) [ ]"
                     ?checked=${s.colorizeParens ?? false}
                     tip=${TOOLTIPS.colorizeParens}
                     @change=${(e: CustomEvent) => this.emit({ colorizeParens: e.detail.value })}
@@ -332,10 +328,10 @@ export class SettingsPanel extends LitElement {
 										s.colorizeParens
 											? html`
                     <div class="flex items-center justify-between gap-3 pl-0.5">
-                      <span class="text-xs text-ui-muted-subtle">Aside color</span>
+                      <span class="text-xs text-ui-muted-subtle">Färg på inskott</span>
                       <input
                         type="color" .value=${s.parenHighlightColor}
-                        aria-label="Parentheses and brackets highlight color"
+                        aria-label="Färg på parenteser"
                         @input=${(e: InputEvent) => this.emit({ parenHighlightColor: (e.target as HTMLInputElement).value })}
                         class="w-9 h-9 rounded-lg shrink-0 cursor-pointer border border-base-300 bg-transparent"
                       />
@@ -348,7 +344,7 @@ export class SettingsPanel extends LitElement {
             </div>
             <div class="flex flex-col gap-4">
               <speeedy-toggle
-                label="Dyslexia-friendly font"
+                label="Dyslexivänligt typsnitt"
                 ?checked=${s.dyslexiaMode}
                 tip=${TOOLTIPS.dyslexiaMode}
                 @change=${(e: CustomEvent) => {
@@ -357,7 +353,7 @@ export class SettingsPanel extends LitElement {
 								}}
               ></speeedy-toggle>
               <div>
-                <span class="text-sm text-base-content block mb-2">Irlen overlay tint</span>
+                <span class="text-sm text-base-content block mb-2">Färgtoning (Irlen)</span>
                 <speeedy-segmented
                   .options=${(
 										["none", "peach", "mint", "parchment"] as const
@@ -369,10 +365,14 @@ export class SettingsPanel extends LitElement {
 										};
 										return {
 											value: mode,
-											label:
-												mode === "none"
-													? "Off"
-													: mode.charAt(0).toUpperCase() + mode.slice(1),
+											label: (
+												{
+													none: "Av",
+													peach: "Persika",
+													mint: "Mint",
+													parchment: "Pergament",
+												} as const
+											)[mode],
 											style: mode === "none" ? "" : colors[mode],
 										};
 									})}
@@ -384,7 +384,7 @@ export class SettingsPanel extends LitElement {
 										? html`
                   <div class="mt-3">
                     <speeedy-range
-                      label="Overlay intensity"
+                      label="Tonens styrka"
                       min="0.05" max="0.5" step="0.01"
                       .value=${s.irlenOpacity ?? 0.18}
                       .format=${(v: number) => `${Math.round(v * 100)}%`}
@@ -400,19 +400,19 @@ export class SettingsPanel extends LitElement {
               </div>
             </div>
             <div class="flex flex-col gap-4 pt-2 border-t border-base-200/60">
-              <span class="text-xs uppercase tracking-widest text-ui-muted">Pause &amp; anchor</span>
+              <span class="text-xs uppercase tracking-widest text-ui-muted">Paus och ankare</span>
               <div>
-                <span class="text-sm text-base-content block mb-2">Pause view mode</span>
+                <span class="text-sm text-base-content block mb-2">Visning vid paus</span>
                 <speeedy-segmented
-                  .options=${(["focus", "context", "fulltext"] as const).map((v) => ({ value: v, label: v.charAt(0).toUpperCase() + v.slice(1) }))}
+                  .options=${(["focus", "context", "fulltext"] as const).map((v) => ({ value: v, label: ({ focus: "Ordet", context: "Sammanhang", fulltext: "Hela texten" } as const)[v] }))}
                   .value=${s.pauseView ?? "focus"}
                   @change=${(e: CustomEvent) => this.emit({ pauseView: e.detail.value })}
                 ></speeedy-segmented>
               </div>
               <div>
-                <span class="text-sm text-base-content block mb-2">Bionic anchor position</span>
+                <span class="text-sm text-base-content block mb-2">Placering av bionisk markering</span>
                 <speeedy-segmented
-                  .options=${(["early", "balanced", "late"] as const).map((pos) => ({ value: pos, label: pos.charAt(0).toUpperCase() + pos.slice(1) }))}
+                  .options=${(["early", "balanced", "late"] as const).map((pos) => ({ value: pos, label: ({ early: "Tidigt", balanced: "Mitten", late: "Sent" } as const)[pos] }))}
                   .value=${s.bionicFocusPosition ?? "balanced"}
                   @change=${(e: CustomEvent) => this.emit({ bionicFocusPosition: e.detail.value })}
                 ></speeedy-segmented>
@@ -423,50 +423,50 @@ export class SettingsPanel extends LitElement {
 
         <!-- Reading features -->
         <section class="border-t border-base-200 pt-6 pb-2">
-          <h2 class="text-xs uppercase tracking-widest text-ui-muted font-medium mb-4">Reading features</h2>
+          <h2 class="text-xs uppercase tracking-widest text-ui-muted font-medium mb-4">Läsfunktioner</h2>
           <div class="flex flex-col gap-3">
             <speeedy-toggle
-              label="Show progress bar"
+              label="Visa förloppsindikator"
               ?checked=${s.showProgress}
               @change=${(e: CustomEvent) => this.emit({ showProgress: e.detail.value })}
             ></speeedy-toggle>
             <speeedy-toggle
-              label="Focus mode (immersion)"
+              label="Fokusläge"
               ?checked=${s.focusModeEnabled ?? false}
-              tip="While playing, hide the header, progress bar, bottom controls, and settings so only words show. Tap the reading area or Space to pause and bring controls back. Toggle anytime with F."
+              tip="Döljer allt utom orden medan texten spelas. Tryck på läsytan eller mellanslag för att pausa och få tillbaka kontrollerna. Växla med F."
               @change=${(e: CustomEvent) => this.emit({ focusModeEnabled: e.detail.value })}
             ></speeedy-toggle>
             <speeedy-toggle
-              label="ORP guide marks"
+              label="Hjälpmarkeringar vid fokuspunkten"
               ?checked=${s.showOrpGuides}
               tip=${TOOLTIPS.orpGuides}
               @change=${(e: CustomEvent) => this.emit({ showOrpGuides: e.detail.value })}
             ></speeedy-toggle>
             <speeedy-toggle
-              label="Hide trailing punctuation"
+              label="Dölj skiljetecken efter ord"
               ?checked=${s.hidePunctuationInDisplay ?? false}
               @change=${(e: CustomEvent) => this.emit({ hidePunctuationInDisplay: e.detail.value })}
             ></speeedy-toggle>
             <speeedy-toggle
-              label="Remove citations"
+              label="Ta bort källhänvisningar"
               ?checked=${s.removeCitations ?? false}
-              tip="Strip inline citations like [1], [1-3], and (Smith et al., 2020) for distraction-free academic reading."
+              tip="Tar bort hänvisningar som [1], [1-3] och (Smith m.fl., 2020), så att kurslitteratur läses utan avbrott."
               @change=${(e: CustomEvent) => this.emit({ removeCitations: e.detail.value })}
             ></speeedy-toggle>
             <speeedy-toggle
-              label="Ticker mode"
+              label="Rullande text"
               ?checked=${s.tickerMode ?? false}
-              tip="Instead of flashing one word at a time, text scrolls horizontally at your configured WPM. Speed, pause, and seek all work as normal."
+              tip="Texten rullar i sidled i ditt tempo i stället för att visas ett ord i taget. Tempo, paus och hopp fungerar som vanligt."
               @change=${(e: CustomEvent) => this.emit({ tickerMode: e.detail.value })}
             ></speeedy-toggle>
             <speeedy-toggle
-              label="Smart speed logic"
+              label="Smart tempo"
               ?checked=${s.smartSpeed}
               tip=${TOOLTIPS.smartSpeed}
               @change=${(e: CustomEvent) => this.emit({ smartSpeed: e.detail.value })}
             ></speeedy-toggle>
             <speeedy-toggle
-              label="Bionic reading fixations"
+              label="Bionisk läsning"
               ?checked=${s.bionicMode}
               tip=${TOOLTIPS.bionicMode}
               @change=${(e: CustomEvent) => {
@@ -477,7 +477,7 @@ export class SettingsPanel extends LitElement {
 
             <div class="flex flex-col gap-2">
               <speeedy-toggle
-                label="Peripheral context"
+                label="Ord runt omkring"
                 ?checked=${s.peripheralContext}
                 tip=${TOOLTIPS.peripheralContext}
                 @change=${(e: CustomEvent) => this.emit({ peripheralContext: e.detail.value })}
@@ -487,7 +487,7 @@ export class SettingsPanel extends LitElement {
 									? html`
                 <div class="pl-1 mt-1">
                   <speeedy-range
-                    label="Density (words each side)"
+                    label="Antal ord på varje sida"
                     min="1" max="3" step="1"
                     .value=${s.peripheralContextCount ?? 1}
                     min-label="1"
@@ -504,12 +504,12 @@ export class SettingsPanel extends LitElement {
 
         <!-- Audio -->
         <section class="border-t border-base-200 pt-6 pb-2">
-          <h2 class="text-xs uppercase tracking-widest text-ui-muted font-medium mb-4">Audio &amp; focus</h2>
+          <h2 class="text-xs uppercase tracking-widest text-ui-muted font-medium mb-4">Ljud och fokus</h2>
           <div class="flex flex-col gap-5">
             <!-- Clicks -->
             <div class="flex flex-col gap-3">
               <speeedy-toggle
-                label="Tactile word clicks"
+                label="Klickljud per ord"
                 ?checked=${s.clickSoundEnabled ?? false}
                 tip=${TOOLTIPS.clickSound}
                 @change=${(e: CustomEvent) => this.emit({ clickSoundEnabled: e.detail.value })}
@@ -519,7 +519,7 @@ export class SettingsPanel extends LitElement {
 									? html`
                 <div class="pl-1">
                   <speeedy-range
-                    label="Click pitch factor"
+                    label="Klickets tonhöjd"
                     min="0.1" max="3.0" step="0.1"
                     .value=${s.clickSoundPitch ?? 1.0}
                     .format=${(v: number) => `${v.toFixed(1)}x`}
@@ -535,7 +535,7 @@ export class SettingsPanel extends LitElement {
             <!-- Ambient -->
             <div class="flex flex-col gap-3">
               <div>
-                <span class="text-sm text-base-content block mb-2">Ambient focus noise</span>
+                <span class="text-sm text-base-content block mb-2">Bakgrundsbrus</span>
                 <speeedy-segmented
                   .options=${(["none", "white", "pink", "brown"] as const).map(
 										(n) => {
@@ -546,10 +546,14 @@ export class SettingsPanel extends LitElement {
 											};
 											return {
 												value: n,
-												label:
-													n === "none"
-														? "Off"
-														: n.charAt(0).toUpperCase() + n.slice(1),
+												label: (
+													{
+														none: "Av",
+														white: "Vitt",
+														pink: "Rosa",
+														brown: "Brunt",
+													} as const
+												)[n],
 												style: n === "none" ? "" : colors[n],
 											};
 										},
@@ -570,7 +574,7 @@ export class SettingsPanel extends LitElement {
 									? html`
                 <div class="pl-1">
                   <speeedy-range
-                    label="Noise volume"
+                    label="Brusvolym"
                     min="0" max="1" step="0.05"
                     .value=${s.ambientVolume ?? 0.5}
                     .format=${(v: number) => `${Math.round(v * 100)}%`}
@@ -588,22 +592,22 @@ export class SettingsPanel extends LitElement {
 
         <!-- Engine logic -->
         <section class="border-t border-base-200 pt-6 pb-4">
-          <h2 class="text-xs uppercase tracking-widest text-ui-muted font-medium mb-4">Engine logic</h2>
+          <h2 class="text-xs uppercase tracking-widest text-ui-muted font-medium mb-4">Motor</h2>
           <div class="flex flex-col gap-4">
             <speeedy-toggle
-              label="Start countdown (3s)"
+              label="Nedräkning före start (3 s)"
               ?checked=${s.countdownEnabled ?? false}
               tip=${TOOLTIPS.countdown}
               @change=${(e: CustomEvent) => this.emit({ countdownEnabled: e.detail.value })}
             ></speeedy-toggle>
             <speeedy-toggle
-              label="Comma pause beacon"
+              label="Lika lång paus vid komma som vid punkt"
               ?checked=${s.commaAsPause ?? false}
               tip=${TOOLTIPS.commaAsPause}
               @change=${(e: CustomEvent) => this.emit({ commaAsPause: e.detail.value })}
             ></speeedy-toggle>
             <speeedy-toggle
-              label="Aside closing pause"
+              label="Paus efter inskott"
               ?checked=${s.contextPauseOnClose ?? true}
               tip=${TOOLTIPS.contextPauseOnClose}
               @change=${(e: CustomEvent) => this.emit({ contextPauseOnClose: e.detail.value })}

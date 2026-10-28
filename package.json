@@ -1,6 +1,6 @@
 {
-  "name": "speeedy",
-  "private": false,
+  "name": "speed-reader",
+  "private": true,
   "version": "1.2.0",
   "type": "module",
   "scripts": {
@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "e2e": "playwright test",
     "e2e:headed": "playwright test --headed",
-    "prepare": "husky"
+    "prepare": "husky",
+    "hjarnan": "npx -y tsx scripts/hjarnan.ts"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.2",

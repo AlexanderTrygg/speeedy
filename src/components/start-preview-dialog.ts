@@ -113,16 +113,16 @@ export class StartPreviewDialog extends LitElement {
           <header class="flex items-start justify-between gap-3 px-5 py-4 border-b border-base-200 shrink-0">
             <div class="min-w-0">
               <h2 class="text-base font-semibold text-base-content truncate">
-                ${this.title.trim() || "Choose where to start"}
+                ${this.title.trim() || "Välj var du vill börja"}
               </h2>
               <p class="text-xs text-ui-muted font-light mt-0.5">
-                Scroll past copyright and front matter, then click the paragraph where the book starts.
+                Scrolla förbi förord och innehållsförteckning och tryck på stycket där texten börjar.
               </p>
             </div>
             <button
               type="button"
               class="btn btn-ghost btn-sm btn-circle shrink-0"
-              aria-label="Close preview"
+              aria-label="Stäng förhandsvisning"
               @click=${this.close}
             >
               ${icon(X, "w-4 h-4")}
@@ -132,11 +132,11 @@ export class StartPreviewDialog extends LitElement {
           <div
             class="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-2 scrollbar-thin"
             role="listbox"
-            aria-label="Document paragraphs"
+            aria-label="Dokumentets stycken"
           >
             ${
 							this.paragraphs.length === 0
-								? html`<p class="text-sm text-ui-muted text-center py-8">No text to preview.</p>`
+								? html`<p class="text-sm text-ui-muted text-center py-8">Ingen text att visa.</p>`
 								: this.paragraphs.map(
 										(para, i) => html`
                   <button
@@ -156,7 +156,7 @@ export class StartPreviewDialog extends LitElement {
                         ¶ ${i + 1}
                       </span>
                       <span class="text-[10px] font-mono text-ui-muted-subtle">
-                        word ${para.startWordIndex.toLocaleString()}
+                        ord ${para.startWordIndex.toLocaleString()}
                       </span>
                     </div>
                     <p class="text-sm text-base-content/80 font-light leading-relaxed whitespace-pre-wrap">
@@ -172,8 +172,8 @@ export class StartPreviewDialog extends LitElement {
             <p class="text-xs text-ui-muted font-mono">
               ${
 								this.selectedStartIndex === 0
-									? `Start at beginning · ${this.totalWords.toLocaleString()} words`
-									: `From word ${this.selectedStartIndex.toLocaleString()} · ${remaining.toLocaleString()} left`
+									? `Från början · ${this.totalWords.toLocaleString()} ord`
+									: `Från ord ${this.selectedStartIndex.toLocaleString()} · ${remaining.toLocaleString()} kvar`
 							}
               ${
 								selectedPara && this.selectedStartIndex > 0
@@ -186,14 +186,14 @@ export class StartPreviewDialog extends LitElement {
                 type="button"
                 class="btn btn-ghost btn-sm"
                 @click=${() => this.startFrom(0)}
-              >From beginning</button>
+              >Från början</button>
               <button
                 type="button"
                 class="btn btn-primary btn-sm"
                 data-umami-event="preview-start"
                 ?disabled=${this.paragraphs.length === 0}
                 @click=${() => this.startFrom(this.selectedStartIndex)}
-              >Start from here</button>
+              >Börja här</button>
             </div>
           </footer>
         </div>

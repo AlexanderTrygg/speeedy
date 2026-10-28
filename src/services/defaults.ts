@@ -28,7 +28,7 @@ export const DEFAULT_SETTINGS: ReaderSettings = {
 	theme: "system",
 	chunkSize: 1,
 	bionicMode: false,
-	smartSpeed: false,
+	smartSpeed: true,
 	speedRampEnabled: false,
 	speedRampTarget: 500,
 	dyslexiaMode: false,

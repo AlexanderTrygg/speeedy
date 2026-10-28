@@ -37,8 +37,8 @@ export class SpeeedyPageNav extends LitElement {
 			: "";
 
 		const backBtn = this.backHref
-			? html`<a href=${this.backHref} class="btn btn-ghost btn-sm btn-circle" aria-label="Go back">${icon(ArrowLeft, "w-4 h-4")}</a>`
-			: html`<button class="btn btn-ghost btn-sm btn-circle" @click=${this.handleBack} aria-label="Go back">${icon(ArrowLeft, "w-4 h-4")}</button>`;
+			? html`<a href=${this.backHref} class="btn btn-ghost btn-sm btn-circle" aria-label="Tillbaka">${icon(ArrowLeft, "w-4 h-4")}</a>`
+			: html`<button class="btn btn-ghost btn-sm btn-circle" @click=${this.handleBack} aria-label="Tillbaka">${icon(ArrowLeft, "w-4 h-4")}</button>`;
 
 		return html`
       <nav class="px-6 py-4 flex items-center gap-3 border-b border-base-200 ${stickyClasses}">

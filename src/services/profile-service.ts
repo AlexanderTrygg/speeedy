@@ -58,7 +58,7 @@ export async function loadProfileFromFile(file: File): Promise<UserProfile> {
 		!Array.isArray(raw.sessions) ||
 		typeof raw.settings !== "object"
 	) {
-		throw new Error("Invalid profile file.");
+		throw new Error("Ogiltig profilfil.");
 	}
 	return raw as UserProfile;
 }

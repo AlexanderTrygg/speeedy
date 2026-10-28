@@ -1,6 +1,7 @@
 import { html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { BookOpen, Clipboard, Clock, Edit2, Play, Trash2 } from "lucide";
+import type { BrainBundle, BrainItem } from "../models/brain.js";
 import type {
 	ParsedDocument,
 	SavedDocument,
@@ -11,6 +12,8 @@ import { tokenize } from "../services/rsvp-engine.js";
 import {
 	deleteSavedDocument,
 	getSavedDocuments,
+	loadBrainBundle,
+	saveBrainBundle,
 	saveDocument,
 	saveProfile,
 } from "../services/storage-service.js";
@@ -32,7 +35,9 @@ export class AppPage extends LitElement {
 	@property({ type: Object }) profile!: UserProfile;
 	@state() private pastedText = "";
 	@state() private error = "";
-	@state() private inputTab: "file" | "text" = "file";
+	@state() private inputTab: "file" | "text" | "brain" = "file";
+	@state() private brain: BrainBundle | null = null;
+	@state() private brainQuery = "";
 	@state() private loadedDocTitle = "";
 	@state() private loadedDocText = "";
 	@state() private customTitle = "";
@@ -53,15 +58,17 @@ export class AppPage extends LitElement {
 		this.recentMinimized =
 			localStorage.getItem(AppPage.RECENT_MINIMIZED_KEY) === "1";
 		this.savedDocs = await getSavedDocuments();
+		this.brain = await loadBrainBundle();
+		if (this.brain) this.inputTab = "brain";
 
 		const isFirstVisit =
 			(this.profile?.sessions?.length ?? 0) === 0 &&
 			this.savedDocs.length === 0;
 		if (isFirstVisit) {
 			this.pastedText = DEMO_TEXT;
-			this.loadedDocTitle = "Demo: The Science of Speed Reading";
+			this.loadedDocTitle = "Demo: så funkar snabbläsning";
 			this.loadedDocText = DEMO_TEXT;
-			this.customTitle = "Demo: The Science of Speed Reading";
+			this.customTitle = "Demo: så funkar snabbläsning";
 			this.inputTab = "text";
 		}
 
@@ -100,7 +107,7 @@ export class AppPage extends LitElement {
 		this.customTitle = "";
 		this.inputTab = "text";
 		this.error = "";
-		showToast("Text loaded from clipboard ✓", "success");
+		showToast("Text hämtad från urklipp ✓", "success");
 		trackEvent("clipboard-paste", { words: text.split(/\s+/).length });
 	};
 
@@ -112,7 +119,7 @@ export class AppPage extends LitElement {
 		try {
 			const text = await navigator.clipboard.readText();
 			if (!text.trim()) {
-				showToast("Clipboard is empty", "error");
+				showToast("Urklipp är tomt", "error");
 				return;
 			}
 			this.pastedText = text.trim();
@@ -120,11 +127,14 @@ export class AppPage extends LitElement {
 			this.loadedDocText = "";
 			this.customTitle = "";
 			this.error = "";
-			showToast("Clipboard loaded ✓", "success");
+			showToast("Text hämtad från urklipp ✓", "success");
 			trackEvent("clipboard-paste", { words: text.trim().split(/\s+/).length });
 		} catch {
 			// Permission denied or clipboard unavailable — fail silently.
-			showToast("Could not read clipboard — try Ctrl+V instead", "error");
+			showToast(
+				"Kunde inte läsa urklipp — klistra in direkt i textrutan",
+				"error",
+			);
 		}
 	};
 
@@ -151,6 +161,53 @@ export class AppPage extends LitElement {
 		}
 	};
 
+	private handleBrainImported = async (
+		e: CustomEvent<{ bundle: BrainBundle }>,
+	): Promise<void> => {
+		const { bundle } = e.detail;
+		try {
+			await saveBrainBundle(bundle);
+		} catch (err) {
+			console.error("[speeedy] Failed to save brain bundle:", err);
+			showToast("Kunde inte spara texterna från hjärnan.", "error");
+			return;
+		}
+		this.brain = bundle;
+		this.brainQuery = "";
+		this.inputTab = "brain";
+		this.error = "";
+		showToast(`${bundle.items.length} texter från hjärnan ✓`, "success");
+	};
+
+	/** A saved copy of a vault text, matched by title, so progress carries over. */
+	private savedCopy(item: BrainItem): SavedDocument | undefined {
+		return this.savedDocs.find((d) => d.title === item.title);
+	}
+
+	private openBrainItem(item: BrainItem): void {
+		const saved = this.savedCopy(item);
+		if (saved && saved.completionPercent > 0 && saved.completionPercent < 98) {
+			navigate(
+				"reader",
+				{ title: saved.title, text: saved.text, wordCount: saved.wordCount },
+				saved.id,
+				saved.resumeWordIndex,
+			);
+			return;
+		}
+		this.handleFileParsed(
+			new CustomEvent("file-parsed", {
+				detail: {
+					doc: {
+						title: item.title,
+						text: item.text,
+						wordCount: item.wordCount,
+					},
+				},
+			}),
+		);
+	}
+
 	private handleFileError = (e: CustomEvent<{ message: string }>): void => {
 		this.error = e.detail.message;
 		showToast(e.detail.message, "error");
@@ -159,7 +216,7 @@ export class AppPage extends LitElement {
 	private openPreview = (): void => {
 		if (!this.pastedText.trim()) {
 			this.error =
-				"Nothing to preview yet. Paste some text or load a file first.";
+				"Inget att visa än. Klistra in text eller välj en fil först.";
 			return;
 		}
 		this.error = "";
@@ -173,7 +230,8 @@ export class AppPage extends LitElement {
 	private handleStartReading = async (startWordIndex = 0): Promise<void> => {
 		const text = this.pastedText.trim();
 		if (!text) {
-			this.error = "Nothing to read yet. Paste some text or load a file first.";
+			this.error =
+				"Inget att läsa än. Klistra in text eller välj en fil först.";
 			return;
 		}
 		const wordCount = countWords(text);
@@ -183,10 +241,10 @@ export class AppPage extends LitElement {
 			Math.min(startWordIndex, Math.max(0, tokenCount - 1)),
 		);
 		const baseTitle =
-			this.customTitle.trim() || this.loadedDocTitle || "Pasted Text";
+			this.customTitle.trim() || this.loadedDocTitle || "Inklistrad text";
 		const isModified =
 			this.loadedDocText.length > 0 && text !== this.loadedDocText;
-		const title = isModified ? `${baseTitle} – modified` : baseTitle;
+		const title = isModified ? `${baseTitle} – redigerad` : baseTitle;
 		const completionPercent =
 			wordCount > 0 ? Math.round((safeStart / wordCount) * 100) : 0;
 		let saved: SavedDocument;
@@ -201,7 +259,7 @@ export class AppPage extends LitElement {
 		} catch (err) {
 			console.error("[speeedy] Failed to save document:", err);
 			this.error =
-				"Could not save this document. Try again, or paste a shorter text.";
+				"Kunde inte spara dokumentet. Försök igen eller klistra in en kortare text.";
 			showToast(this.error, "error");
 			return;
 		}
@@ -256,30 +314,30 @@ export class AppPage extends LitElement {
 		const effectiveTheme = theme === "system" ? getResolvedTheme(theme) : theme;
 		const themeTitle =
 			effectiveTheme === "dark"
-				? "Theme: Dark — click for light"
-				: "Theme: Light — click for dark";
+				? "Tema: mörkt — tryck för ljust"
+				: "Tema: ljust — tryck för mörkt";
 		return html`
       <div class="h-screen flex flex-col bg-base-100 overflow-hidden relative">
 
         <nav class="px-4 md:px-10 py-3 md:py-4 flex items-center justify-between shrink-0 gap-2 min-h-[48px]">
           <div class="flex items-center gap-2 md:gap-3 min-w-0">
-            <span class="text-sm md:text-base tracking-[0.2em] md:tracking-[0.25em] font-light text-base-content select-none truncate">speeedy</span>
+            <span class="text-sm md:text-base tracking-[0.2em] md:tracking-[0.25em] font-light text-base-content select-none truncate">speed reader</span>
           </div>
           <div class="flex items-center gap-0.5 sm:gap-1 shrink-0">
             <button type="button" class="btn btn-ghost btn-sm gap-1.5 min-h-[44px] min-w-[44px] touch-manipulation" @click=${() => navigate("profile")}>
               ${
 								this.profile?.avatarImage
-									? html`<img src=${this.profile.avatarImage} alt="Profile" class="w-6 h-6 rounded-full object-cover shrink-0" />`
+									? html`<img src=${this.profile.avatarImage} alt="Profil" class="w-6 h-6 rounded-full object-cover shrink-0" />`
 									: html`<span class="text-base leading-none">${this.profile?.avatarEmoji ?? "📚"}</span>`
 							}
-              <span class="hidden sm:inline">${this.profile?.displayName ?? "Profile"}</span>
+              <span class="hidden sm:inline">${this.profile?.displayName ?? "Profil"}</span>
             </button>
             <button type="button" class="btn btn-ghost btn-sm gap-2 min-h-[44px] min-w-[44px] touch-manipulation" @click=${() => navigate("stats")}>
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                   d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
               </svg>
-              <span class="hidden sm:inline">Stats</span>
+              <span class="hidden sm:inline">Statistik</span>
             </button>
             <button
               type="button"
@@ -298,17 +356,17 @@ export class AppPage extends LitElement {
 
           <div class="mb-5 md:mb-6 text-center select-none">
             <h1 class="text-2xl sm:text-3xl font-extralight tracking-tight text-base-content leading-tight mb-1">
-              What are you reading <span class="font-semibold">today?</span>
+              Vad vill du läsa <span class="font-semibold">idag?</span>
             </h1>
             ${
 							(this.profile?.sessions?.length ?? 0) > 0
 								? html`
               <p class="text-xs text-ui-muted-subtle font-light">
-                Your avg: <span class="font-mono text-ui-muted">${Math.round((this.profile?.sessions?.reduce((sum, s) => sum + s.wpm, 0) ?? 0) / Math.max(this.profile?.sessions?.length ?? 1, 1))} WPM</span>
+                Ditt snitt: <span class="font-mono text-ui-muted">${Math.round((this.profile?.sessions?.reduce((sum, s) => sum + s.wpm, 0) ?? 0) / Math.max(this.profile?.sessions?.length ?? 1, 1))} ord/min</span>
               </p>`
 								: html`
               <p class="text-xs text-ui-muted-subtle font-light">
-                Drop a file or paste text to start reading
+                Välj en fil, en text från hjärnan eller klistra in text
               </p>`
 						}
           </div>
@@ -320,13 +378,13 @@ export class AppPage extends LitElement {
             <div class="welcome-banner w-full max-w-xl mb-4 ${this.welcomeDismissed ? "dismissed" : ""}">
               <div class="rounded-xl bg-primary/8 border border-primary/20 px-4 py-3 flex items-start gap-3 relative">
                 <div class="text-sm text-ui-muted font-light leading-relaxed pr-8">
-                  A demo is loaded — hit <strong class="font-medium text-base-content">Begin Reading</strong> to try RSVP,
-                  or paste your own text.
+                  En demotext är laddad — tryck <strong class="font-medium text-base-content">Börja läsa</strong> för att prova,
+                  eller klistra in din egen text.
                 </div>
                 <button
                   type="button"
                   class="btn btn-ghost btn-xs btn-circle absolute top-2 right-2 text-ui-muted-subtle hover:text-base-content"
-                  aria-label="Dismiss hint"
+                  aria-label="Stäng tipset"
                   @click=${this.dismissWelcome}
                 >
                   <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -342,7 +400,7 @@ export class AppPage extends LitElement {
           <div class="w-full max-w-xl">
             <div class="bg-base-100 border border-base-200 rounded-xl md:rounded-2xl shadow-sm overflow-hidden">
               <div class="flex border-b border-base-200">
-                ${(["file", "text"] as const).map(
+                ${(["brain", "file", "text"] as const).map(
 									(tab) => html`
                   <button
                     type="button"
@@ -356,12 +414,13 @@ export class AppPage extends LitElement {
 											this.inputTab = tab;
 											this.error = "";
 										}}
-                  >${tab.charAt(0).toUpperCase() + tab.slice(1)}</button>
+                  >${{ brain: "Hjärnan", file: "Fil", text: "Text" }[tab]}</button>
                 `,
 								)}
               </div>
 
               <div class="p-4 md:p-6">
+                ${this.inputTab === "brain" ? this.renderBrainTab() : ""}
                 ${this.inputTab === "file" ? this.renderFileTab() : ""}
                 ${this.inputTab === "text" ? this.renderTextTab() : ""}
               </div>
@@ -386,7 +445,7 @@ export class AppPage extends LitElement {
 
         <start-preview-dialog
           .open=${this.previewOpen}
-          .title=${this.customTitle.trim() || this.loadedDocTitle || "Choose where to start"}
+          .title=${this.customTitle.trim() || this.loadedDocTitle || "Välj var du vill börja"}
           .text=${this.pastedText}
           @preview-close=${() => {
 						this.previewOpen = false;
@@ -397,7 +456,7 @@ export class AppPage extends LitElement {
         ></start-preview-dialog>
 
         <footer class="shrink-0 px-4 md:px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-2 border-t border-base-200/60">
-          <span class="text-xs tracking-[0.3em] text-ui-muted-subtle font-light">speeedy</span>
+          <span class="text-xs tracking-[0.3em] text-ui-muted-subtle font-light">speed reader</span>
         </footer>
       </div>
     `;
@@ -406,19 +465,127 @@ export class AppPage extends LitElement {
 	private renderFileTab() {
 		return html`
       <speeedy-file-uploader
-        label="Drop a file, or click to browse"
-        hint="PDF · DOCX · DOC · TXT · EPUB · RTF · HTML · ODT · and more · up to 50 MB"
+        label="Släpp en fil här eller tryck för att välja"
+        hint="PDF · DOCX · TXT · EPUB · RTF · HTML · ODT · med flera · upp till 50 MB"
         @file-parsed=${this.handleFileParsed}
         @file-error=${this.handleFileError}
       ></speeedy-file-uploader>
     `;
 	}
 
+	private renderBrainTab() {
+		const importer = (label: string, hint: string, compact: boolean) => html`
+      <speeedy-file-uploader
+        label=${label}
+        hint=${hint}
+        ?compact=${compact}
+        @brain-imported=${this.handleBrainImported}
+        @file-parsed=${this.handleFileParsed}
+        @file-error=${this.handleFileError}
+      ></speeedy-file-uploader>
+    `;
+		const where =
+			"iCloud Drive › Struktur › 10-PROJECTS › 10.7-Speed Reader › hjarnan";
+
+		if (!this.brain) {
+			return html`
+        <div class="flex flex-col gap-4">
+          <p class="text-sm text-ui-muted font-light leading-relaxed">
+            Läs kurslitteratur, transkript och läsguider ur Personlig Hjärna utan att
+            köra OCR igen. Kör <code class="font-mono text-xs bg-base-200 px-1 py-0.5 rounded">npm run hjarnan</code>
+            på datorn och välj sedan filen <span class="font-medium text-base-content">hjarnan.json</span> här.
+          </p>
+          ${importer("Välj hjarnan.json", where, false)}
+        </div>
+      `;
+		}
+
+		const q = this.brainQuery.trim().toLocaleLowerCase("sv");
+		const items = q
+			? this.brain.items.filter((i) =>
+					`${i.title} ${i.group}`.toLocaleLowerCase("sv").includes(q),
+				)
+			: this.brain.items;
+		const groups = new Map<string, BrainItem[]>();
+		for (const item of items) {
+			groups.set(item.group, [...(groups.get(item.group) ?? []), item]);
+		}
+		const wpm = this.profile?.settings.wpm ?? 300;
+		const exported = new Date(this.brain.generatedAt).toLocaleDateString("sv", {
+			day: "numeric",
+			month: "short",
+		});
+		const originLabel: Record<BrainItem["origin"], string> = {
+			ocr: "OCR",
+			pdf: "PDF",
+			markdown: "text",
+		};
+
+		return html`
+      <div class="flex flex-col gap-3">
+        <input
+          type="search"
+          class="input input-bordered input-sm w-full"
+          placeholder="Sök bland ${this.brain.items.length} texter…"
+          aria-label="Sök i hjärnan"
+          .value=${this.brainQuery}
+          @input=${(e: InputEvent) => {
+						this.brainQuery = (e.target as HTMLInputElement).value;
+					}}
+        />
+        <div class="flex flex-col gap-4 max-h-[46vh] overflow-y-auto -mx-1 px-1 scrollbar-thin">
+          ${
+						items.length === 0
+							? html`<p class="text-sm text-ui-muted text-center py-6">Inget matchar "${this.brainQuery}".</p>`
+							: [...groups].map(
+									([group, list]) => html`
+            <section>
+              <h3 class="text-xs uppercase tracking-widest text-ui-muted-subtle font-medium mb-1.5">${group}</h3>
+              <ul class="flex flex-col gap-1">
+                ${list.map((item) => {
+									const saved = this.savedCopy(item);
+									const pct = saved?.completionPercent ?? 0;
+									const status =
+										pct >= 98 ? "Läst" : pct > 0 ? `Fortsätt ${pct} %` : "";
+									return html`
+                  <li>
+                    <button
+                      type="button"
+                      class="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl border border-base-200 hover:border-primary/40 transition-colors min-h-[44px] touch-manipulation"
+                      @click=${() => this.openBrainItem(item)}
+                    >
+                      <span class="flex-1 min-w-0">
+                        <span class="block text-sm text-base-content truncate">${item.title}</span>
+                        <span class="block text-xs text-ui-muted-subtle font-light">
+                          ${item.kind === "läsguide" ? "Läsguide" : originLabel[item.origin]}
+                          · ${item.wordCount.toLocaleString("sv")} ord
+                          · ~${estimateReadingMinutes(item.wordCount, wpm)}
+                        </span>
+                      </span>
+                      ${status ? html`<span class="text-xs text-primary font-medium shrink-0">${status}</span>` : ""}
+                    </button>
+                  </li>
+                `;
+								})}
+              </ul>
+            </section>
+          `,
+								)
+					}
+        </div>
+        <div class="flex items-center justify-between gap-3 pt-1">
+          <span class="text-xs text-ui-muted-subtle">Exporterad ${exported}</span>
+          <div class="w-44">${importer("Uppdatera", "", true)}</div>
+        </div>
+      </div>
+    `;
+	}
+
 	private loadDemoText(): void {
 		this.pastedText = DEMO_TEXT;
-		this.loadedDocTitle = "Demo: The Science of Speed Reading";
+		this.loadedDocTitle = "Demo: så funkar snabbläsning";
 		this.loadedDocText = DEMO_TEXT;
-		this.customTitle = "Demo: The Science of Speed Reading";
+		this.customTitle = "Demo: så funkar snabbläsning";
 		trackEvent("demo-loaded");
 	}
 
@@ -426,7 +593,9 @@ export class AppPage extends LitElement {
 		const words = countWords(this.pastedText);
 		const wpm = this.profile?.settings.wpm ?? 300;
 		const estTimeLabel = words > 0 ? estimateReadingMinutes(words, wpm) : "";
-		const timeDisplay = estTimeLabel ? ` · ~${estTimeLabel} at ${wpm} WPM` : "";
+		const timeDisplay = estTimeLabel
+			? ` · ~${estTimeLabel} i ${wpm} ord/min`
+			: "";
 
 		return html`
       <div class="flex flex-col gap-4">
@@ -439,7 +608,7 @@ export class AppPage extends LitElement {
                 d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
             </svg>
             <span class="text-xs text-primary font-medium truncate">${this.loadedDocTitle}</span>
-            <span class="text-xs text-ui-muted ml-auto shrink-0">extracted ✓</span>
+            <span class="text-xs text-ui-muted ml-auto shrink-0">hämtad ✓</span>
           </div>
         `
 						: ""
@@ -456,15 +625,15 @@ export class AppPage extends LitElement {
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M13 10V3L4 14h7v7l9-11h-7z"/>
               </svg>
-              Try a demo
+              Prova en demo
             </button>
             <button
               class="btn btn-outline btn-sm gap-2 border-dashed"
-              title="Load text from clipboard"
+              title="Hämta text från urklipp"
               @click=${() => void this.pasteFromClipboard()}
             >
               ${icon(Clipboard, "w-3.5 h-3.5")}
-              Paste clipboard
+              Klistra in
             </button>
           </div>
         `
@@ -472,8 +641,8 @@ export class AppPage extends LitElement {
 				}
         <speeedy-input
           id="doc-title-input"
-          label="Title"
-          placeholder="Pasted Text"
+          label="Titel"
+          placeholder="Inklistrad text"
           .value=${this.customTitle}
           @change=${(e: CustomEvent<{ value: string }>) => {
 						this.customTitle = e.detail.value;
@@ -481,8 +650,8 @@ export class AppPage extends LitElement {
         ></speeedy-input>
         <speeedy-textarea
           id="doc-text-input"
-          label="Text to read"
-          placeholder="Paste your text here…"
+          label="Text att läsa"
+          placeholder="Klistra in din text här…"
           .value=${this.pastedText}
           min-height="7rem"
           max-height="14rem"
@@ -494,14 +663,14 @@ export class AppPage extends LitElement {
 					words >= AppPage.PREVIEW_AUTO_OPEN_WORDS
 						? html`
           <p class="text-xs text-ui-muted font-light leading-relaxed -mt-1">
-            Long document — use <span class="text-base-content/80">Preview</span> to skip copyright / front matter and start where the book begins.
+            Långt dokument — använd <span class="text-base-content/80">Förhandsvisa</span> för att hoppa förbi förord och innehållsförteckning.
           </p>
         `
 						: ""
 				}
         <div class="flex items-center justify-between gap-2">
           <span class="text-xs text-ui-muted font-mono">
-            ${words > 0 ? `${words.toLocaleString()} words${timeDisplay}` : ""}
+            ${words > 0 ? `${words.toLocaleString()} ord${timeDisplay}` : ""}
           </span>
           <div class="flex gap-2 flex-wrap justify-end">
             ${
@@ -512,7 +681,7 @@ export class AppPage extends LitElement {
 								this.loadedDocTitle = "";
 								this.loadedDocText = "";
 								this.customTitle = "";
-							}}>Clear</button>
+							}}>Rensa</button>
             `
 								: ""
 						}
@@ -521,13 +690,13 @@ export class AppPage extends LitElement {
               data-umami-event="open-preview"
               ?disabled=${!this.pastedText.trim()}
               @click=${this.openPreview}
-            >Preview</button>
+            >Förhandsvisa</button>
             <button
               class="btn btn-primary btn-sm"
               data-umami-event="begin-reading"
               ?disabled=${!this.pastedText.trim()}
               @click=${() => void this.handleStartReading()}
-            >Begin Reading</button>
+            >Börja läsa</button>
           </div>
         </div>
       </div>
@@ -540,11 +709,11 @@ export class AppPage extends LitElement {
         <div class="flex items-center justify-between mb-3 px-1">
           <div class="flex items-center gap-2">
             ${icon(BookOpen, "w-3.5 h-3.5 text-ui-muted-subtle")}
-            <span class="text-xs uppercase tracking-widest text-ui-muted-subtle font-medium">Recent</span>
+            <span class="text-xs uppercase tracking-widest text-ui-muted-subtle font-medium">Senast</span>
           <button
               class="btn btn-ghost btn-xs btn-circle ml-1"
-              title="${this.recentMinimized ? "Show all" : "Minimize"}"
-              aria-label="${this.recentMinimized ? "Show recent documents" : "Minimize recent documents"}"
+              title="${this.recentMinimized ? "Visa alla" : "Minimera"}"
+              aria-label="${this.recentMinimized ? "Visa senaste dokument" : "Minimera senaste dokument"}"
               aria-expanded="${!this.recentMinimized}"
               @click=${() => {
 								this.recentMinimized = !this.recentMinimized;
@@ -565,7 +734,7 @@ export class AppPage extends LitElement {
             <button class="btn btn-ghost btn-xs text-xs text-ui-muted" @click=${() => {
 							sessionStorage.setItem("speeedy:profile-tab", "library");
 							navigate("profile");
-						}}>View All →</button>
+						}}>Visa alla →</button>
           `
 							: ""
 					}
@@ -584,7 +753,7 @@ export class AppPage extends LitElement {
 	private renderDocCard(doc: SavedDocument) {
 		const pct = doc.completionPercent;
 		const resumeLabel =
-			pct >= 98 ? "Read again" : pct > 0 ? `Resume ${pct}%` : "Start";
+			pct >= 98 ? "Läs igen" : pct > 0 ? `Fortsätt ${pct} %` : "Läs";
 		const date = new Date(doc.savedAt).toLocaleDateString(undefined, {
 			month: "short",
 			day: "numeric",
@@ -596,7 +765,7 @@ export class AppPage extends LitElement {
           <div class="text-sm font-medium text-base-content truncate">${doc.title}</div>
           <div class="flex items-center gap-2 mt-0.5">
             ${icon(Clock, "w-3 h-3 text-ui-muted-subtle")}
-            <span class="text-xs text-ui-muted-subtle font-light">${date} · ${doc.wordCount.toLocaleString()} words</span>
+            <span class="text-xs text-ui-muted-subtle font-light">${date} · ${doc.wordCount.toLocaleString()} ord</span>
           </div>
           ${
 						pct > 0 && pct < 98
@@ -611,8 +780,8 @@ export class AppPage extends LitElement {
         <div class="flex items-center gap-1 shrink-0">
           <button
             class="btn btn-ghost btn-xs btn-circle opacity-0 group-hover:opacity-100 transition-opacity text-ui-muted hover:text-base-content"
-            title="Edit"
-            aria-label="Edit ${doc.title}"
+            title="Redigera"
+            aria-label="Redigera ${doc.title}"
             @click=${() => {
 							this.customTitle = doc.title;
 							this.pastedText = doc.text;
@@ -626,8 +795,8 @@ export class AppPage extends LitElement {
           </button>
           <button
             class="btn btn-ghost btn-xs btn-circle opacity-0 group-hover:opacity-100 transition-opacity text-error/60 hover:text-error"
-            title="Remove"
-            aria-label="Remove ${doc.title}"
+            title="Ta bort"
+            aria-label="Ta bort ${doc.title}"
             @click=${async () => {
 							await deleteSavedDocument(doc.id);
 							this.savedDocs = await getSavedDocuments();
@@ -660,15 +829,15 @@ export class AppPage extends LitElement {
 	}
 }
 
-const DEMO_TEXT = `Every time you read a line of text, your eyes don't move smoothly, they jump. These rapid jumps are called saccades, and they happen three to four times per second. During each jump, you read nothing at all. That dead time adds up to roughly ten percent of every reading session, wasted on pure eye movement.
+const DEMO_TEXT = `När du läser en rad text glider inte ögonen jämnt fram. De hoppar. Hoppen kallas sackader och sker tre till fyra gånger i sekunden, och under själva hoppet läser du ingenting.
 
-Rapid Serial Visual Presentation, or RSVP, eliminates saccades entirely. Instead of your eyes chasing words across a page, the words come to you, one at a time, at a fixed point on the screen. Your gaze stays perfectly still. The result is a significant reduction in the mechanical overhead of reading, which means more of your attention goes to understanding rather than scanning.
+Här kommer orden till dig i stället, ett i taget, på samma plats. Blicken står still. Den röda bokstaven är ordets fokuspunkt, där hjärnan känner igen ordet snabbast.
 
-There is a second insight built into this app: the Optimal Recognition Point. Research by O'Regan and Jacobs showed that every word has a sweet spot, typically the letter just to the left of center, where the brain identifies the word fastest. Speeedy aligns every single word to this exact position. Your eye lands on the pivot, and recognition happens at peak efficiency, flash after flash.
+Efter varje mening kommer en kort paus. Den finns där för att arbetsminnet ska hinna knyta ihop meningen innan nästa börjar. Pausen finns kvar även när du ökar tempot.
 
-Speed without comprehension is useless. That is why automatic pauses are inserted after punctuation, giving your working memory the fraction of a second it needs to consolidate each clause before the next one arrives. Combined with a gentle slow-start ramp at the beginning of each session, the experience is surprisingly comfortable even at speeds well above your normal reading pace.
+Tappade du tråden? Svep åt höger för att gå tillbaka till början av meningen, och svep igen för meningen före. Svep åt vänster för att hoppa fram. Tryck på texten för att pausa.
 
-The average adult reads at around two hundred and thirty-eight words per minute. With practice on RSVP, many readers comfortably reach four hundred words per minute while maintaining strong comprehension. You just experienced a small sample. Hit play on your own text and see what your number is.`;
+En vuxen läser ungefär tvåhundrafemtio ord i minuten. Börja där, och höj tempot först när det känns lätt.`;
 
 declare global {
 	interface HTMLElementTagNameMap {

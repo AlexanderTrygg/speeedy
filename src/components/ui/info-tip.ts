@@ -34,7 +34,7 @@ export class SpeeedyInfoTip extends LitElement {
 		return html`
       <button
         type="button"
-        aria-label="More information"
+        aria-label="Mer information"
         class="btn btn-ghost btn-xs btn-circle text-base-content/30 hover:text-primary transition-colors"
         @mouseenter=${this.showTip}
         @mouseleave=${this.hideTip}
